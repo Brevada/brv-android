@@ -1,6 +1,5 @@
 /*
 	TODO
-	- Finish app.failedSubmission(payload)
 	- Implement background task to upload local saves w/o affecting UI.
 	- Implement API authentication.
 	- Implement 'customizable' error messages.
@@ -15,7 +14,8 @@ var globals = {
 	device : null,
 	appDirURL : '',
 	battery : { level : 100, isPlugged : false },
-	adminPassword : 'Brevada!23'
+	adminPassword : 'Brevada!23',
+	db : null
 };
 
 var backPushedTimes = 0;
@@ -36,6 +36,9 @@ var app = {
 		window.addEventListener("batterystatus", function(info){
 			globals.battery = info;
 		}, false);
+		
+		console.log("Opening database...");
+		globals.db = window.sqlitePlugin.openDatabase({ name: "database.db", createFromLocation: 1 });
 		
 		app.configureEnv(function(){
 			app.update(function(){
@@ -286,11 +289,21 @@ var app = {
 		return content;
 	},
 	failedSubmission : function(payload) {
-		/*
-			TODO
-			- Log what happened.
-			- Save the failed submission to be sent at later datetime.
-		*/
+		console.log("Failed to upload payload.");
+		var payloadString = JSON.stringify(payload);
+		
+		globals.db.transaction(function(tx){
+			tx.executeSql("CREATE TABLE IF NOT EXISTS payloads (id integer primary key, data text)");
+			tx.executeSql("INSERT INTO payloads (data) VALUES (?)", [payloadString], function(tx, res){
+				if(res.rowsAffected == 1){
+					console.log("Stored payload.");
+				} else {
+					console.log("Error. Unable to store payload.");
+				}
+			});
+		}, function(e){
+			console.log("DB Error: " + e.message);
+		});
 	}
 };
 

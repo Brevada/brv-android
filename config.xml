@@ -1,42 +1,54 @@
 <?xml version='1.0' encoding='utf-8'?>
-<widget id="com.brevada.tablet" version="0.0.1" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0" xmlns:android="http://schemas.android.com/apk/res/android">
-	<name>Brevada Tablet</name>
-	<description>
+<widget id="com.brevada.tablet" version="0.0.1" xmlns="http://www.w3.org/ns/widgets" xmlns:android="http://schemas.android.com/apk/res/android" xmlns:cdv="http://cordova.apache.org/ns/1.0">
+    <name>Brevada Tablet</name>
+    <description>
 		The official Brevada Tablet app.
 	</description>
-	<author email="noah@brevada.com" href="http://brevada.com">
+    <author email="noah@brevada.com" href="http://brevada.com">
 		Brevada Team
 	</author>
-	<content src="index.html" />
-	<plugin name="cordova-plugin-whitelist" version="1" />
-	<allow-navigation href="http://*/*" />
-	<allow-navigation href="https://*/*" />
-	<allow-navigation href="data:*" />
-	<access origin="*" />
-	<allow-intent href="http://*/*" />
-	<allow-intent href="https://*/*" />
-	<allow-intent href="tel:*" />
-	<allow-intent href="sms:*" />
-	<allow-intent href="mailto:*" />
-	<allow-intent href="geo:*" />
-	<preference name="OverrideUserAgent" value="BrevadaTablet/0.0.1" />
-	<preference name="Fullscreen" value="true" />
-	<preference name="Orientation" value="portrait" />
-	<preference name="ShowTitle" value="false"/>
-	<preference name="HideKeyboardFormAccessoryBar" value="true"/>
-	<preference name="android-minSdkVersion" value="19" />
-	<preference name="android-targetSdkVersion" value="19" />
-	<preference name="AndroidLaunchMode" value="singleInstance" />
-	<icon src="res/icon.png" />
-	<platform name="android">
-		<allow-intent href="market:*" />
-		<icon src="res/android/ldpi.png" density="ldpi" />
-		<icon src="res/android/mdpi.png" density="mdpi" />
-		<icon src="res/android/hdpi.png" density="hdpi" />
-		<icon src="res/android/xhdpi.png" density="xhdpi" />
-	</platform>
-	<platform name="ios">
-		<allow-intent href="itms:*" />
-		<allow-intent href="itms-apps:*" />
-	</platform>
+    <content src="index.html" />
+    <allow-navigation href="http://*/*" />
+    <allow-navigation href="https://*/*" />
+    <allow-navigation href="data:*" />
+    <access origin="*" />
+    <allow-intent href="http://*/*" />
+    <allow-intent href="https://*/*" />
+    <allow-intent href="tel:*" />
+    <allow-intent href="sms:*" />
+    <allow-intent href="mailto:*" />
+    <allow-intent href="geo:*" />
+    <preference name="OverrideUserAgent" value="BrevadaTablet/0.0.1" />
+    <preference name="Fullscreen" value="true" />
+    <preference name="Orientation" value="portrait" />
+    <preference name="ShowTitle" value="false" />
+    <preference name="HideKeyboardFormAccessoryBar" value="true" />
+    <preference name="android-minSdkVersion" value="19" />
+    <preference name="android-targetSdkVersion" value="19" />
+    <preference name="AndroidLaunchMode" value="singleInstance" />
+    <icon src="res/icon.png" />
+    <platform name="android">
+        <allow-intent href="market:*" />
+        <icon density="ldpi" src="res/android/ldpi.png" />
+        <icon density="mdpi" src="res/android/mdpi.png" />
+        <icon density="hdpi" src="res/android/hdpi.png" />
+        <icon density="xhdpi" src="res/android/xhdpi.png" />
+    </platform>
+    <platform name="ios">
+        <allow-intent href="itms:*" />
+        <allow-intent href="itms-apps:*" />
+    </platform>
+    <plugin name="cordova-plugin-whitelist" spec="1" />
+    <plugin name="cordova-plugin-device" spec="~1.0.1" />
+    <plugin name="cordova-plugin-network-information" spec="~1.0.1" />
+    <plugin name="cordova-plugin-battery-status" spec="~1.1.0" />
+    <plugin name="cordova-plugin-geolocation" spec="~1.0.1" />
+    <plugin name="cordova-plugin-file" spec="~3.0.0" />
+    <plugin name="cordova-plugin-file-transfer" spec="~1.2.1" />
+    <plugin name="cordova-plugin-dialogs" spec="~1.1.1" />
+    <plugin name="hu.dpal.phonegap.plugins.UniqueDeviceID" spec="~1.2.0" />
+    <plugin name="cordova-plugin-x-toast" spec="~2.2.1" />
+    <plugin name="cordova-sqlite-storage" spec="~0.7.11" />
+    <plugin name="com.noahnu.cordova.checksum" spec="https://github.com/noahnu/cordova-checksum.git" />
+    <plugin name="com.noahnu.cordova.preventexit" spec="https://github.com/noahnu/cordova-prevent-exit.git" />
 </widget>
