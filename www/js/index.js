@@ -1,21 +1,20 @@
 /*
-	TODO
-	- Implement background task to upload local saves w/o affecting UI.
-	- Implement API authentication.
-	- Implement 'customizable' error messages.
-	- Delete unnecessary files (during Update).
+	Brevada Tablet Framework
 */
 
 var globals = {
 	api : 'http://brevada.com/api/v1/',
-	key : 'dev',
+	key : 'inOkNRZSOayWOPy9vqYA',
 	store : '',
 	uuid : '',
 	device : null,
 	appDirURL : '',
 	battery : { level : 100, isPlugged : false },
 	adminPassword : 'Brevada!23',
-	db : null
+	db : null,
+	polling : false,
+	pollTmr : null,
+	pollInterval : 60000*5
 };
 
 var backPushedTimes = 0;
@@ -44,6 +43,7 @@ var app = {
 			app.update(function(){
 				app.start(function(){
 					// All good.
+					setTimeout(app.poll, 10000);
 				}, function(){
 					// Critical error.
 					app.status("Sorry, something went wrong.<br/>Please call 1-(844)-BREVADA.<br /><br />#"+globals.uuid);
@@ -178,13 +178,20 @@ var app = {
 	},
 	update : function(done) {
 		console.log("Entering update process..");
+		
+		if(!app.online()){
+			console.log("Failed to check for updates: no internet connection.");
+			done();
+			return;
+		}
+		
 		app.status("Checking for updates...");
 		$.ajax({
 			url : globals.api+'resources',
 			cache : false,
 			dataType : 'json',
 			timeout : 7500,
-			data: {k : globals.key, serial : globals.uuid},
+			data: {serial : globals.uuid},
 			success : function(data){
 				console.log(JSON.stringify(data));
 				if(!data.hasOwnProperty('error') || data.error.length == 0){
@@ -288,6 +295,46 @@ var app = {
 		content = content.replace("/images", globals.appDirURL+"images");
 		return content;
 	},
+	online : function(){
+		return navigator.connection.type != Connection.NONE && navigator.connection.type != Connection.UNKNOWN;
+	},
+	poll : function(){
+		clearTimeout(globals.pollTmr);
+		if(globals.polling){ return; }
+		globals.polling = true;
+		
+		if(app.online()){
+			globals.db.transaction(function(tx){
+				tx.executeSql("SELECT id, data FROM payloads LIMIT 50", [], function(tx,res){
+					for(var i = 0; i < res.rows.length; i++){
+						var row = res.rows.item(i);
+						var payload = JSON.parse(row.data);
+						app.sendPayload(payload, function(){
+							globals.db.executeSql("DELETE FROM payloads WHERE id = ?", [row.id], function(){
+								console.log("Row deleted.");
+							}, function(e){
+								console.log("DB Error: " + e.message);
+							});
+						});
+					}
+					globals.polling = false;
+					setTimeout(app.poll, globals.pollInterval);
+				}, function(e){
+					console.log("DB Error: " + e.message);
+					globals.polling = false;
+					setTimeout(app.poll, globals.pollInterval);
+				});
+			}, function(e){
+				console.log("DB Error: " + e.message);
+				globals.polling = false;
+				setTimeout(app.poll, globals.pollInterval);
+			});
+			
+		} else {
+			globals.polling = false;
+			setTimeout(app.poll, globals.pollInterval);
+		}
+	},
 	failedSubmission : function(payload) {
 		console.log("Failed to upload payload.");
 		var payloadString = JSON.stringify(payload);
@@ -303,6 +350,56 @@ var app = {
 			});
 		}, function(e){
 			console.log("DB Error: " + e.message);
+		});
+	},
+	sendPayload : function(payload, sent){
+		if(!app.online()){
+			app.failedSubmission(payload);
+			return;
+		}
+		
+		payload.time = Math.floor((new Date).getTime()/1000);
+		
+		var keys = Object.keys(payload);
+		keys.sort();
+		
+		var dataString = globals.key;
+		for(var i = 0; i < keys.length; i++){
+			if(keys[i] == 'signature'){ continue; }
+			dataString += keys[i] + "=" + payload[keys[i]];
+		}
+		dataString = dataString.toLowerCase();
+		console.log("Data String: "+dataString);
+		
+		Checksum.forString(dataString, function(hex){
+			payload.signature = hex;
+			console.log("Signature: "+hex);
+			
+			$.ajax({
+				url : globals.api+'feedback',
+				cache : false,
+				dataType : 'json',
+				timeout : 5000,
+				method : 'POST',
+				data: payload,
+				success : function(data){
+					console.log(JSON.stringify(data));
+					if(!data.hasOwnProperty('error') || data.error.length == 0){
+						console.log("Rating submitted.");
+						if(typeof sent === 'function'){
+							sent();
+						}
+					} else {
+						app.failedSubmission(payload);
+					}
+				}
+			}).fail(function(j, textStatus){
+				console.log("Failed to post feedback: " + textStatus + " - " + j.responseText);
+				app.failedSubmission(payload);
+			});
+		}, function(err){
+			console.log("Failed to generate hash for feedback.");
+			app.failedSubmission(payload);
 		});
 	}
 };
