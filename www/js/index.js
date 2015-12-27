@@ -15,7 +15,13 @@ var globals = {
 	polling : false,
 	pollTmr : null,
 	pollInterval : 60000*5,
-	sessionToken : 'not-set'
+	sessionToken : 'not-set',
+	
+	inactivityTmr : null,
+	inactiveDelayA : 45000,
+	inactiveDelayB : 15000,
+	inactiveA : null,
+	inactiveB : null
 };
 
 var backPushedTimes = 0;
@@ -410,6 +416,20 @@ var app = {
 		for (var i = 32; i > 0; --i) result += chars[Math.floor(Math.random() * chars.length)];
 		console.log('Session Token: ' + result);
 		globals.sessionToken = result;
+	},
+	updateInteraction : function(){
+		if(globals.inactiveDelayA > 0){
+			clearTimeout(globals.inactivityTmr);
+			globals.inactivityTmr = setTimeout(app.inactive, globals.inactiveDelayA);
+		}
+	},
+	inactive : function(){
+		if(typeof globals.inactiveA === 'function' && typeof globals.inactiveB === 'function'){
+			globals.inactiveA();
+			
+			clearTimeout(globals.inactivityTmr);
+			globals.inactivityTmr = setTimeout(globals.inactiveB, globals.inactiveDelayB);
+		}
 	}
 };
 
