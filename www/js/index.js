@@ -14,7 +14,8 @@ var globals = {
 	db : null,
 	polling : false,
 	pollTmr : null,
-	pollInterval : 60000*5
+	pollInterval : 60000*5,
+	sessionToken : 'not-set'
 };
 
 var backPushedTimes = 0;
@@ -43,6 +44,7 @@ var app = {
 			app.update(function(){
 				app.start(function(){
 					// All good.
+					app.newSessionToken();
 					setTimeout(app.poll, 10000);
 				}, function(){
 					// Critical error.
@@ -401,6 +403,13 @@ var app = {
 			console.log("Failed to generate hash for feedback.");
 			app.failedSubmission(payload);
 		});
+	},
+	newSessionToken : function(){
+		var chars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+		var result = '';
+		for (var i = 32; i > 0; --i) result += chars[Math.floor(Math.random() * chars.length)];
+		console.log('Session Token: ' + result);
+		globals.sessionToken = result;
 	}
 };
 
