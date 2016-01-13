@@ -31,8 +31,6 @@ div.cordova-loading > img { height: auto; max-width: 100%; margin-top: 65%; }
 div.cordova-loading > h1 { font-size: 3em; }
 div.cordova-loading p { font-size: 1.8em; }
 
-#reset { color: #FFF; }
-
 @keyframes fade {
     from { opacity: 1.0; }
     50% { opacity: 0.3; }
