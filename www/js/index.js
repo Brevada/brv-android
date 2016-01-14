@@ -17,7 +17,8 @@ var app = {
 		filesystem : {
 			store : '',
 			appDir : '',
-			db : null
+			db : null,
+			storedDataCount : 0
 		},
 		system : {
 			uuid : '',
@@ -28,6 +29,14 @@ var app = {
 			polling : false,
 			pollTmr : null,
 			pollInterval : 60000*5
+		},
+		position : {
+			watch : null,
+			latitude :  0,
+			longitude : 0,
+			altitude : 0,
+			accuracy : -1,
+			timestamp : 0
 		}
 	},
     initialize: function() {
@@ -44,6 +53,14 @@ var app = {
 		window.addEventListener("batterystatus", function(info){
 			app.opts.system.battery = info;
 		}, false);
+		
+		app.opts.position.watch = navigator.geolocation.watchPosition(function(pos){
+			app.opts.position.latitude = pos.coords.latitude;
+			app.opts.position.longitude = pos.coords.longitude;
+			app.opts.position.altitude = pos.coords.altitude;
+			app.opts.position.accuracy = pos.coords.accuracy;
+			app.opts.position.timestamp = pos.timestamp/1000;
+		});
 		
 		app.log("Opening database...");
 		app.opts.filesystem.db = window.sqlitePlugin.openDatabase({ name: "database.db", createFromLocation: 1 });
@@ -105,7 +122,7 @@ var app = {
 		app.status("Configuring environment.");
 		window.plugins.uniqueDeviceID.get(function(u){
 			app.opts.filesystem.store = cordova.file.dataDirectory;
-			app.opts.system.device = document.getElementById('deviceProperties');
+			app.opts.system.device = device;
 			app.opts.system.uuid = u;
 			app.log("UUID = " + app.opts.system.uuid);
 			
@@ -330,12 +347,17 @@ var app = {
 		app.opts.polling.polling = true;
 		
 		if(app.online()){
+			app.sendinfo();	
 			app.opts.filesystem.db.transaction(function(tx){
 				tx.executeSql("SELECT id, data FROM payloads", [], function(tx,res){
 					if(res.rows.length > 0){
 						app.iteratePayloads(res.rows, res.rows.length-1, function(){
 							app.opts.polling.polling = false;
 							setTimeout(app.poll, app.opts.polling.pollInterval);
+							
+							tx.executeSql("SELECT COUNT(*) as cnt FROM payloads", [], function(tx, res){
+								app.opts.filesystem.storedDataCount = res.rows.get(0).cnt;
+							});
 						});
 					} else {
 						app.opts.polling.polling = false;
@@ -373,13 +395,13 @@ var app = {
 			app.log("DB Error C: " + e.message);
 		});
 	},
-	sendPayload : function(payload, sent){
-		if(!app.online()){ app.log("Not online...");
-			app.failedSubmission(payload);
-			return;
+	send : function(apiRoute, payload, done, fail){
+		if(typeof fail === 'undefined' && typeof done !== 'undefined'){
+			fail = done;
 		}
 		
 		payload.time = Math.floor((new Date).getTime()/1000);
+		payload.serial = app.opts.system.uuid;
 		
 		var keys = Object.keys(payload);
 		keys.sort();
@@ -397,7 +419,7 @@ var app = {
 			app.log("Signature: "+hex);
 			
 			$.ajax({
-				url : app.opts.connection.api+'feedback',
+				url : app.opts.connection.api+apiRoute,
 				cache : false,
 				dataType : 'json',
 				timeout : app.opts.connection.payloadTimeout,
@@ -406,22 +428,92 @@ var app = {
 				success : function(data){
 					app.log(JSON.stringify(data));
 					if(!data.hasOwnProperty('error') || data.error.length == 0){
-						app.log("Rating submitted.");
-						if(typeof sent === 'function'){
-							sent();
+						if(typeof done === 'function'){
+							done(data);
 						}
 					} else {
-						app.failedSubmission(payload);
+						if(typeof fail === 'function'){
+							fail(data);
+						}
 					}
 				}
 			}).fail(function(j, textStatus){
-				app.log("Failed to post feedback: " + textStatus + " - " + j.responseText);
-				app.failedSubmission(payload);
+				app.log("Send failed: " + textStatus + " - " + j.responseText);
+				if(typeof fail === 'function'){
+					fail({});
+				}
 			});
 		}, function(err){
-			app.log("Failed to generate hash for feedback.");
+			app.log("Failed to generate hash for send.");
+			if(typeof fail === 'function'){
+				fail({});
+			}
+		});
+	},
+	sendPayload : function(payload, sent){
+		if(!app.online()){ app.log("Not online...");
+			app.failedSubmission(payload);
+			return;
+		}
+		
+		app.send('feedback', payload, function(data){
+			app.log("Rating submitted.");
+			if(typeof sent === 'function'){
+				sent();
+			}
+		}, function(data){
 			app.failedSubmission(payload);
 		});
+	},
+	sendinfo : function(done){
+		var payload = {
+			battery_percent : app.opts.system.battery.level,
+			battery_plugged_in : app.opts.system.battery.isPlugged.toString(),
+			device_model : app.opts.system.device.model,
+			device_version : app.opts.system.device.version,
+			stored_data_count : app.opts.filesystem.storedDataCount,
+			position_latitude : app.opts.position.latitude || '',
+			position_longitude : app.opts.position.longitude || '',
+			position_timestamp : app.opts.position.timestamp || ''
+		};
+		
+		app.send('tablet/communicate', payload, function(data){
+			app.log("Communication successful.");
+			if(data.hasOwnProperty('commands') && data.commands.length > 0){
+				app.iterateCommands(data.commands);
+			}
+			if(typeof done === 'function'){ done(); }
+		}, function(data){
+			app.log("Communication failed.");
+			if(typeof done === 'function'){ done(); }
+		});
+	},
+	iterateCommands : function(commands){
+		for(var i = 0; i < commands.length; i++){
+			var cmd = commands[i].command.trim();
+			var cmdId = commands[i].id;
+			app.send('tablet/command', {
+				command_id : cmdId
+			}, function(data){
+				app.doCommand(cmd);
+			}, function(data){
+				app.log("Command not acknowledged by server. Ignoring command.");
+			});
+		}
+	},
+	doCommand : function(cmd){
+		switch(cmd.toLowerCase()){
+			case 'test':
+				app.log('Test received.');
+				break;
+			case 'restart':
+				document.location.href = 'index.html?var='+(new Date).getTime();
+				break;
+		}
+		
+		if(app.custom.hasOwnProperty('doCommand')){
+			app.custom.doCommand(cmd);
+		}
 	},
 	log : function(msg){
 		console.log(msg);
