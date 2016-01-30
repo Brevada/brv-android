@@ -41,9 +41,18 @@ var app = {
 	},
     initialize: function() {
         $(document).on('deviceready', this.onDeviceReady);
+		$(document).ready(function(){
+			var img = new Image();
+			img.onload = function(){
+				if($('#cordova-app > div.cordova-loading > img').length > 0){
+					$('#cordova-app > div.cordova-loading').fadeIn();
+				}
+			};
+			img.src = 'images/brevada.png';
+		});
     },
 	status : function(msg) {
-		$('#deviceready > p').html(msg);
+		$('#cordova-app > div.cordova-loading > div.deviceready > p').html(msg);
 	},
     onDeviceReady: function() {
 		app.log("Device is ready.");
@@ -199,6 +208,9 @@ var app = {
 					app.log('Failed to load markup.');
 					fail();
 				});
+			} else {
+				app.log("Failed to load layout.");
+				app.status("<br/><br/>Sorry, something went wrong.<br/><br/>If this is your first time setting up the device, please ensure you are connected to the internet.<br/><br/>For support, call 1-(844)-BREVADA.<br /><br /><span class='app-uuid'>#"+app.opts.system.uuid+"</span>");
 			}
 		});
 	},
@@ -228,8 +240,8 @@ var app = {
 					} else { done(); }
 				} else { done(); }
 			}
-		}).fail(function(){
-			app.log("Failed to check for updates.");
+		}).fail(function(xhr, txt){
+			app.log("Failed to check for updates: " + txt);
 			done();
 		});
 	},
