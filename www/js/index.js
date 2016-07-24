@@ -2,12 +2,25 @@
 	Brevada Tablet Framework
 */
 
+$.fn.randomize = function(childElem) {
+	return this.each(function() {
+		var $this = $(this);
+		var elems = $this.children(childElem);
+		elems.sort(function() { return (Math.round(Math.random())-0.5); });
+		$this.detach(childElem);
+		for(var i=0; i < elems.length; i++){
+			$this.prepend(elems[i]);
+		}
+	});
+}
+
 var app = {
 	opts : {
 		connection : {
 			api : 'http://brevada.com/api/v1/',
 			key : 'inOkNRZSOayWOPy9vqYA',
-			payloadTimeout : 5000
+			payloadTimeout : 5000,
+			updateTmr : null
 		},
 		admin : {
 			password : 'Brevada!23',
@@ -28,11 +41,11 @@ var app = {
 		polling : {
 			polling : false,
 			pollTmr : null,
-			pollInterval : 60000*5
+			pollInterval : 60000*3.5
 		},
 		position : {
 			watch : null,
-			latitude :  0,
+			latitude : 0,
 			longitude : 0,
 			altitude : 0,
 			accuracy : -1,
@@ -86,7 +99,7 @@ var app = {
 			});
 		}, function(){
 			// Critical error. Failed to configure environment.
-			app.status('Cannot configure environment!');
+			app.status('Cannot configure environment!<br/>Please call 1-(844)-BREVADA.');
 		});
     },
 	preventExit : function(){
@@ -103,23 +116,27 @@ var app = {
 			app.opts.backPushedTime = now;
 			
 			if(app.opts.backPushedTimes > 10){
+				app.opts.backPushedTimes = 0;
+				
 				app.log("Showing admin panel.");
 				navigator.notification.prompt(
-					"Please enter the password, click 'OK', then the 'Home' button.",
+					"A password is required.",
 					function(results){
-						if(results.buttonIndex == 2){
-							app.opts.backPushedTimes = 0;
-						} else if(results.buttonIndex == 1){
-							if(results.input1 == app.opts.admin.password){
+						if(results.input1 == app.opts.admin.password){
+							window.plugins.toast.showShortBottom("Access granted.");
+							if(results.buttonIndex == 1){
+								// Exit
 								PreventExit.disable();
-								window.plugins.toast.showShortBottom("Access granted.");
-							} else {
-								window.plugins.toast.showShortBottom("Access denied.");
+								navigator.app.exitApp();
+							} else if(results.buttonIndex == 2){
+								app.doCommand('restart');
 							}
+						} else {
+							window.plugins.toast.showShortBottom("Access denied.");
 						}
 					},
-					'Admin',
-					['Ok', 'Cancel'],
+					'Admin: ' + (app.opts.system.uuid || 'Unconfigured'),
+					['Exit', 'Reload', 'Cancel'],
 					''
 				);
 			}
@@ -219,18 +236,26 @@ var app = {
 		
 		if(!app.online()){
 			app.log("Failed to check for updates: no internet connection.");
-			done();
+			app.status("No internet connection.<br />Operating offline.");
+			setTimeout(done, 2000);
 			return;
 		}
 		
 		app.status("Checking for updates...");
+		
+		app.opts.connection.updateTmr = setTimeout(function(){
+			app.status("Taking longer than expected...");
+		}, 5000);
+		
 		$.ajax({
 			url : app.opts.connection.api+'resources',
 			cache : false,
 			dataType : 'json',
-			timeout : 7500,
+			timeout : 8500,
 			data: {serial : app.opts.system.uuid},
 			success : function(data){
+				clearTimeout(app.opts.connection.updateTmr);
+				
 				app.log(JSON.stringify(data));
 				if(!data.hasOwnProperty('error') || data.error.length == 0){
 					if(data.hasOwnProperty('download') && data.download.length > 0){
@@ -241,8 +266,10 @@ var app = {
 				} else { done(); }
 			}
 		}).fail(function(xhr, txt){
+			clearTimeout(app.opts.connection.updateTmr);
 			app.log("Failed to check for updates: " + txt);
-			done();
+			app.status("Unable to check for updates.");
+			setTimeout(done, 1500);
 		});
 	},
 	downloadBatch : function(filesToDownload, done) {
@@ -359,7 +386,7 @@ var app = {
 		app.opts.polling.polling = true;
 		
 		if(app.online()){
-			app.sendinfo();	
+			app.sendInfo();	
 			app.opts.filesystem.db.transaction(function(tx){
 				tx.executeSql("SELECT id, data FROM payloads", [], function(tx,res){
 					if(res.rows.length > 0){
@@ -469,7 +496,7 @@ var app = {
 		}
 		
 		app.send('feedback', payload, function(data){
-			app.log("Rating submitted.");
+			app.log("Feedback payload submitted.");
 			if(typeof sent === 'function'){
 				sent();
 			}
@@ -477,7 +504,7 @@ var app = {
 			app.failedSubmission(payload);
 		});
 	},
-	sendinfo : function(done){
+	sendInfo : function(done){
 		var payload = {
 			battery_percent : app.opts.system.battery.level,
 			battery_plugged_in : app.opts.system.battery.isPlugged.toString(),
@@ -525,6 +552,84 @@ var app = {
 		
 		if(app.custom.hasOwnProperty('doCommand')){
 			app.custom.doCommand(cmd);
+		}
+	},
+	session : {
+		token : 'not-set',
+		poorResponse: false,
+		create : function(){
+			var chars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+			var result = '';
+			for (var i = 32; i > 0; --i) { result += chars[Math.floor(Math.random() * chars.length)]; }
+			app.log('Session Token: ' + result);
+			app.session.token = result;
+			
+			app.session.poorResponse = false;
+			
+			app.events.fireNewSession({ token: app.session.token, timestamp: (new Date()).getTime() });
+			return app.session.token;
+		}
+	},
+	events : {
+		callbacks : {
+			onRating : [],
+			onPoorRating : [],
+			onGoodRating : [],
+			onNewSession : [],
+			onDone : []
+		},
+		fireRating : function(e){
+			for (var i = 0; i < app.events.callbacks.onRating.length; i++){
+				app.events.callbacks.onRating[i](e);
+			}
+			
+			if(e && e.rating <= 40){
+				app.session.poorResponse = true;
+				for (var i = 0; i < app.events.callbacks.onPoorRating.length; i++){
+					app.events.callbacks.onPoorRating[i](e);
+				}
+			}
+			
+			if(e && e.rating >= 80){
+				for (var i = 0; i < app.events.callbacks.onGoodRating.length; i++){
+					app.events.callbacks.onGoodRating[i](e);
+				}
+			}
+			
+			return true;
+		},
+		fireNewSession : function(e){
+			var result = true;
+			for (var i = 0; i < app.events.callbacks.onNewSession.length; i++){
+				if(app.events.callbacks.onNewSession[i](e) === false){
+					result = false;
+				}
+			}
+			return result;
+		},
+		fireDone : function(e){
+			var result = true;
+			for (var i = 0; i < app.events.callbacks.onDone.length; i++){
+				if(app.events.callbacks.onDone[i](e) === false){
+					result = false;
+				}
+			}
+			return result;
+		},
+		onRating : function(cb){
+			app.events.callbacks.onRating.push(cb);
+		},
+		onPoorRating : function(cb){
+			app.events.callbacks.onPoorRating.push(cb);
+		},
+		onGoodRating : function(cb){
+			app.events.callbacks.onGoodRating.push(cb);
+		},
+		onNewSession : function(cb){
+			app.events.callbacks.onNewSession.push(cb);
+		},
+		onDone : function(cb){
+			app.events.callbacks.onDone.push(cb);
 		}
 	},
 	log : function(msg){
