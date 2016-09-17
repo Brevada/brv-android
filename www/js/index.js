@@ -69,13 +69,14 @@ var app = {
 	},
     onDeviceReady: function() {
 		app.log("Device is ready.");
-		
+
 		app.preventExit();
-		
+		window.plugins.insomnia.keepAwake();
+
 		window.addEventListener("batterystatus", function(info){
 			app.opts.system.battery = info;
 		}, false);
-		
+
 		app.opts.position.watch = navigator.geolocation.watchPosition(function(pos){
 			app.opts.position.latitude = pos.coords.latitude;
 			app.opts.position.longitude = pos.coords.longitude;
@@ -83,10 +84,10 @@ var app = {
 			app.opts.position.accuracy = pos.coords.accuracy;
 			app.opts.position.timestamp = pos.timestamp/1000;
 		});
-		
+
 		app.log("Opening database...");
 		app.opts.filesystem.db = window.sqlitePlugin.openDatabase({ name: "database.db", createFromLocation: 1 });
-		
+
 		app.configureEnv(function(){
 			app.update(function(){
 				app.start(function(){
@@ -107,17 +108,17 @@ var app = {
 		PreventExit.enable();
 		document.addEventListener('backbutton', function(e){
 			var now = (new Date()).getTime();
-			
-			if(now - app.opts.backPushedTime > 3000){
+
+			if(now - app.opts.backPushedTime > 4000){
 				app.opts.backPushedTimes = 0;
 			}
-			
+
 			app.opts.backPushedTimes++;
 			app.opts.backPushedTime = now;
-			
+
 			if(app.opts.backPushedTimes > 10){
 				app.opts.backPushedTimes = 0;
-				
+
 				app.log("Showing admin panel.");
 				navigator.notification.prompt(
 					"A password is required.",
@@ -140,7 +141,7 @@ var app = {
 					''
 				);
 			}
-			
+
 			return false;
 		}, false);
 	},
@@ -151,7 +152,7 @@ var app = {
 			app.opts.system.device = device;
 			app.opts.system.uuid = u;
 			app.log("UUID = " + app.opts.system.uuid);
-			
+
 			window.resolveLocalFileSystemURL(cordova.file.applicationDirectory, function(entry){
 				app.opts.filesystem.appDir = entry.toURL() + 'www/';
 				app.log('AppDirURL: ' + app.opts.filesystem.appDir);
@@ -189,7 +190,7 @@ var app = {
 	},
 	start : function(success, fail) {
 		app.status("Starting...");
-		
+
 		var stylesPath = app.getStylesPath();
 		if(stylesPath === false){
 			stylesPath = [];
@@ -204,7 +205,7 @@ var app = {
 						app.log('Loaded markup.');
 						data = app.resolvePaths(data);
 						$('#cordova-app').html(data);
-						
+
 						var scriptPath = app.getScriptPath();
 						if(scriptPath !== false){
 							app.log('Loading script...');
@@ -233,20 +234,20 @@ var app = {
 	},
 	update : function(done) {
 		app.log("Entering update process..");
-		
+
 		if(!app.online()){
 			app.log("Failed to check for updates: no internet connection.");
 			app.status("No internet connection.<br />Operating offline.");
 			setTimeout(done, 2000);
 			return;
 		}
-		
+
 		app.status("Checking for updates...");
-		
+
 		app.opts.connection.updateTmr = setTimeout(function(){
 			app.status("Taking longer than expected...");
 		}, 5000);
-		
+
 		$.ajax({
 			url : app.opts.connection.api+'resources',
 			cache : false,
@@ -255,7 +256,7 @@ var app = {
 			data: {serial : app.opts.system.uuid},
 			success : function(data){
 				clearTimeout(app.opts.connection.updateTmr);
-				
+
 				app.log(JSON.stringify(data));
 				if(!data.hasOwnProperty('error') || data.error.length == 0){
 					if(data.hasOwnProperty('download') && data.download.length > 0){
@@ -277,7 +278,7 @@ var app = {
 			done();
 		} else {
 			var dl = filesToDownload.shift();
-			
+
 			window.resolveLocalFileSystemURL(app.opts.filesystem.store + dl.name, function(entry){
 				Checksum.forFile(entry.toURL(), function(hex){
 					if(hex != dl.sha1){
@@ -302,7 +303,7 @@ var app = {
 					app.downloadBatch(filesToDownload, done);
 				});
 			});
-			
+
 		}
 	},
 	downloadFile : function(dl, done) {
@@ -313,7 +314,7 @@ var app = {
 		} else if(dl.role == 'markup'){
 			app.status("Downloading new interface...");
 		}
-		
+
 		app.log("Entering download process.");
 		var fileTransfer = new FileTransfer();
 		app.log("Beginning file transfer.");
@@ -330,7 +331,7 @@ var app = {
 					localStorage.setItem('styles', ar.join(','));
 				}
 			}
-			
+
 			done();
 		}, function(err){
 			app.log('Error downloading.');
@@ -384,18 +385,18 @@ var app = {
 		clearTimeout(app.opts.polling.pollTmr);
 		if(app.opts.polling.polling){ return; }
 		app.opts.polling.polling = true;
-		
+
 		if(app.online()){
-			app.sendInfo();	
+			app.sendInfo();
 			app.opts.filesystem.db.transaction(function(tx){
 				tx.executeSql("SELECT id, data FROM payloads", [], function(tx,res){
 					if(res.rows.length > 0){
 						app.iteratePayloads(res.rows, res.rows.length-1, function(){
 							app.opts.polling.polling = false;
 							setTimeout(app.poll, app.opts.polling.pollInterval);
-							
-							tx.executeSql("SELECT COUNT(*) as cnt FROM payloads", [], function(tx, res){
-								app.opts.filesystem.storedDataCount = res.rows.get(0).cnt;
+
+							tx.executeSql("SELECT COUNT(*) as cnt FROM payloads", [], function(tx, resu){
+								app.opts.filesystem.storedDataCount = resu.rows.get(0).cnt;
 							});
 						});
 					} else {
@@ -420,7 +421,7 @@ var app = {
 	failedSubmission : function(payload) {
 		app.log("Failed to upload payload.");
 		var payloadString = JSON.stringify(payload);
-		
+
 		app.opts.filesystem.db.transaction(function(tx){
 			tx.executeSql("CREATE TABLE IF NOT EXISTS payloads (id integer primary key, data text)");
 			tx.executeSql("INSERT INTO payloads (data) VALUES (?)", [payloadString], function(tx, res){
@@ -438,13 +439,13 @@ var app = {
 		if(typeof fail === 'undefined' && typeof done !== 'undefined'){
 			fail = done;
 		}
-		
+
 		payload.time = Math.floor((new Date).getTime()/1000);
 		payload.serial = app.opts.system.uuid;
-		
+
 		var keys = Object.keys(payload);
 		keys.sort();
-		
+
 		var dataString = app.opts.connection.key;
 		for(var i = 0; i < keys.length; i++){
 			if(keys[i] == 'signature'){ continue; }
@@ -452,11 +453,11 @@ var app = {
 		}
 		dataString = dataString.toLowerCase();
 		app.log("Data String: "+dataString);
-		
+
 		Checksum.forString(dataString, function(hex){
 			payload.signature = hex;
 			app.log("Signature: "+hex);
-			
+
 			$.ajax({
 				url : app.opts.connection.api+apiRoute,
 				cache : false,
@@ -494,7 +495,7 @@ var app = {
 			app.failedSubmission(payload);
 			return;
 		}
-		
+
 		app.send('feedback', payload, function(data){
 			app.log("Feedback payload submitted.");
 			if(typeof sent === 'function'){
@@ -515,7 +516,7 @@ var app = {
 			position_longitude : app.opts.position.longitude || '',
 			position_timestamp : app.opts.position.timestamp || ''
 		};
-		
+
 		app.send('tablet/communicate', payload, function(data){
 			app.log("Communication successful.");
 			if(data.hasOwnProperty('commands') && data.commands.length > 0){
@@ -549,7 +550,7 @@ var app = {
 				document.location.href = 'index.html?var='+(new Date).getTime();
 				break;
 		}
-		
+
 		if(app.custom.hasOwnProperty('doCommand')){
 			app.custom.doCommand(cmd);
 		}
@@ -563,9 +564,9 @@ var app = {
 			for (var i = 32; i > 0; --i) { result += chars[Math.floor(Math.random() * chars.length)]; }
 			app.log('Session Token: ' + result);
 			app.session.token = result;
-			
+
 			app.session.poorResponse = false;
-			
+
 			app.events.fireNewSession({ token: app.session.token, timestamp: (new Date()).getTime() });
 			return app.session.token;
 		}
@@ -582,20 +583,20 @@ var app = {
 			for (var i = 0; i < app.events.callbacks.onRating.length; i++){
 				app.events.callbacks.onRating[i](e);
 			}
-			
+
 			if(e && e.rating <= 40){
 				app.session.poorResponse = true;
 				for (var i = 0; i < app.events.callbacks.onPoorRating.length; i++){
 					app.events.callbacks.onPoorRating[i](e);
 				}
 			}
-			
+
 			if(e && e.rating >= 80){
 				for (var i = 0; i < app.events.callbacks.onGoodRating.length; i++){
 					app.events.callbacks.onGoodRating[i](e);
 				}
 			}
-			
+
 			return true;
 		},
 		fireNewSession : function(e){

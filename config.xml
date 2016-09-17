@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<widget id="com.brevada.tablet" version="0.0.2" xmlns="http://www.w3.org/ns/widgets" xmlns:android="http://schemas.android.com/apk/res/android" xmlns:cdv="http://cordova.apache.org/ns/1.0">
+<widget id="com.brevada.tablet" version="0.0.3" xmlns="http://www.w3.org/ns/widgets" xmlns:android="http://schemas.android.com/apk/res/android" xmlns:cdv="http://cordova.apache.org/ns/1.0">
     <name>Brevada Tablet</name>
     <description>
 		The official Brevada Tablet app.
@@ -18,7 +18,7 @@
     <allow-intent href="sms:*" />
     <allow-intent href="mailto:*" />
     <allow-intent href="geo:*" />
-    <preference name="OverrideUserAgent" value="BrevadaTablet/0.0.1" />
+    <preference name="OverrideUserAgent" value="BrevadaTablet/0.0.3" />
     <preference name="Fullscreen" value="true" />
     <preference name="Orientation" value="portrait" />
     <preference name="ShowTitle" value="false" />
@@ -51,4 +51,5 @@
     <plugin name="cordova-sqlite-storage" spec="~0.7.11" />
     <plugin name="com.noahnu.cordova.checksum" spec="https://github.com/noahnu/cordova-checksum.git" />
     <plugin name="com.noahnu.cordova.preventexit" spec="https://github.com/noahnu/cordova-prevent-exit.git" />
+    <plugin name="cordova-plugin-insomnia" spec="https://github.com/EddyVerbruggen/Insomnia-PhoneGap-Plugin.git" />
 </widget>
