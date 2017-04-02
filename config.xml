@@ -18,7 +18,7 @@
     <allow-intent href="sms:*" />
     <allow-intent href="mailto:*" />
     <allow-intent href="geo:*" />
-    <preference name="OverrideUserAgent" value="BrevadaTablet/0.0.3" />
+    <preference name="OverrideUserAgent" value="BrevadaTablet/0.0.4" />
     <preference name="Fullscreen" value="true" />
     <preference name="Orientation" value="portrait" />
     <preference name="ShowTitle" value="false" />
