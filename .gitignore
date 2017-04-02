@@ -13,8 +13,14 @@ platforms/*
 plugins/*
 !plugins/.gitkeep
 
+www/js/*
+!www/js/.gitkeep
+
 # Local configuration file (sdk path, etc)
 local.properties
+
+# Package Managers
+node_modules/
 
 # OSX
 .DS_Store
