@@ -22,7 +22,7 @@ const Updater = (function (undefined) {
      * Downloads an individual file from the bundle.
      */
     updater.downloadFile = (id, name) => (
-        env.getDeviceId.then(deviceId => {
+        env.getDeviceId().then(deviceId => {
             let fileUrl = API_URL + '/feedback/bundle/' + id;
             let fileTransfer = new FileTransfer();
             return new Promise((resolve, reject) => {
@@ -41,7 +41,7 @@ const Updater = (function (undefined) {
      */
     updater.download = env => (
         (_env = env) &&
-        env.isOnline
+        env.isOnline()
         .then(env.getDeviceId)
         .then(deviceId => axios.get(API_URL + '/feedback/bundle', {
             params: { deviceId: deviceId }
@@ -70,7 +70,7 @@ const Updater = (function (undefined) {
     updater.update = env => (
         env.isOnline.then(() => (
             /* Connected. */
-            updater.getMasterVersion.then(response => {
+            updater.getMasterVersion().then(response => {
                 let master = response.data.version || undefined;
 
                 /* Check if we're up to date. */
@@ -95,6 +95,8 @@ const Updater = (function (undefined) {
             return Promise.resolve([]);
         })
     );
+
+    return updater;
 })();
 
 export default Updater;

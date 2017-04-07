@@ -20,7 +20,7 @@ export default function RequirePermissions(permissions) {
                 return;
             }
 
-            native.hasPermission(native[permission], (status) => {
+            native.checkPermission(native[permission], (status) => {
                 if (status.hasPermission) {
                     require(permissions.shift());
                 } else {

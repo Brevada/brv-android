@@ -5,25 +5,28 @@
 import dbStorage from 'lib/Storage';
 
  const Environment = (function (undefined) {
-     let environment = {};
+     let environment = {}; /* Environment namespace. */
 
-     let _appDirectory = undefined;
-     let _dataDirectory = undefined;
-     let _deviceId = undefined;
+     let _appDirectory = undefined; /* Resolved path to www dir. */
+     let _dataDirectory = undefined; /* Private & persistant data storage dir. */
+     let _deviceId = undefined; /* Unique device identifier. */
 
-     let _dbConfig = undefined;
-     let _dbData = undefined;
+     let _dbConfig = undefined; /* lowDb options. */
+     let _dbData = undefined; /* lowDb object for "data" storage. */
 
+     /* Conditions & stats for administrative exit procedure. */
      let _exitStats = {
-         lastClickTime: +new Date(),
-         clickCount: 0,
-         clickThreshold: 10,
-         clickSpeed: 5000,
-         password: 'Brevada123'
+         lastClickTime: +new Date(), /* Last time user clicked back button. */
+         clickCount: 0, /* Num of back button clicks in clickSpeed duration. */
+         clickThreshold: 10, /* Number of clicks in duration before acknowledging
+                              * exit intent. */
+         clickSpeed: 5000, /* Timeout before clickCount is reset; recorded from
+                            * time of last click. */
+         password: 'Brevada123' /* Admin password required to perform action. */
      };
 
      /**
-      * Get unique device id.
+      * Get a unique device id which persists between device restarts.
       */
      environment.getDeviceId = () => new Promise((resolve, reject) => {
          if (_deviceId) {
@@ -39,15 +42,26 @@ import dbStorage from 'lib/Storage';
       * Locks application, preventing unauthorized user exit.
       */
      environment.lock = () => {
+         /* The preventExit plugin requests to be the default Home and
+          * Settings screen. This way, the user cannot exit the app by
+          * going "back" to the home screen or accessing system settings. */
          window.plugins.preventExit.enable();
          document.addEventListener('backbutton', environment.onBackButton, false);
+     };
+
+     /**
+      * Unlocks application, restoring ability to exit.
+      */
+     environment.unlock = () => {
+         window.plugins.preventExit.disable();
+         document.removeEventListener('backbutton', environment.onBackButton);
      };
 
      /**
       * Exits the application.
       */
      environment.exit = () => {
-         window.plugins.preventExit.disable();
+         environment.unlock();
          navigator.app.exitApp();
      };
 
@@ -94,14 +108,15 @@ import dbStorage from 'lib/Storage';
      };
 
      /**
-      * Retrieve path to application directory.
+      * Retrieve path to application directory and data directory.
+      * Resolves to data directory entry.
       */
      environment.resolveFileSystem = () => new Promise((resolve, reject) => {
          window.tablet && tablet.status("Configuring file system...");
 
          window.resolveLocalFileSystemURL(cordova.file.applicationDirectory, entry => {
              _appDirectory = entry.toURL() + 'www/';
-             window.resolveLocalFileSystemURL(cordova.file.dataDirectory, entry => {
+             window.resolveLocalFileSystemURL(cordova.file.dataDirectory, _dataDirectoryEntry => {
                  _dataDirectory = entry.toURL();
                  resolve(_dataDirectoryEntry);
              }, reject);
@@ -109,7 +124,7 @@ import dbStorage from 'lib/Storage';
      });
 
      /**
-      * Tests internet connection.
+      * Tests internet connection (not connectivity to server).
       */
      environment.isOnline = () => new Promise((resolve, reject) => {
          if (navigator.connection.type != Connection.NONE && navigator.connection.type != Connection.UNKNOWN) {
@@ -163,7 +178,7 @@ import dbStorage from 'lib/Storage';
       * Initial environment configuration.
       */
      environment.setup = () => (
-         environment.getDeviceId
+         environment.getDeviceId()
          .then(environment.resolveFileSystem)
          .then(environment.setupDB)
          .then(() => Promise.resolve(environment))

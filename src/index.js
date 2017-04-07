@@ -16,33 +16,42 @@ import Updater from 'Updater';
 const NPermissions = ['ACCESS_COARSE_LOCATION', 'ACCESS_FINE_LOCATION'];
 
 docReady(() => {
-    /* Loading animation. */
+    tablet.status("Preparing device...");
+
+    /* Loading animation. el* = element. */
     var img = new Image();
     img.onload = () => {
-        let elImg = document.querySelector('#cordova-app div.cordova-loading > img');
-        if (elImg) {
-            let loader = document.querySelector('#cordova-app div.cordova-loading');
-            if (loader) {
-                loader.className = 'cordova-loading visible';
-            }
-        }
+        /* When the "loading" image has fully loaded, display it. */
+        let elLoader = document.querySelector('#cordova-app div.cordova-loading');
+        if (elLoader) elLoader.className = 'cordova-loading visible';
     };
     img.src = 'img/brevada.png';
 
-    Environment.lock();
+    /* Initiate device and environment configuration when cordova signals all
+     * libraries and plugins have been loaded. */
+    document.addEventListener('deviceready', () => {
+        /* Enter "kiosk" mode - assume control of Home Screen and Settings. */
+        Environment.lock();
 
-    RequirePermissions(NPermissions)
-    .catch(req => {
-        navigator
-        .notification
-        .alert("Permissions must be granted to this application: " + req, () => {
-            navigator.app.exitApp();
-        }, "Permission Required", "Exit");
-    })
-    .then(Environment.setup)
-    .then(Updater.update)
-    .then(Environment.render)
-    .catch(err => {
-        tablet.status("Failed to configure the Brevada Feedback System.");
-    });
+        RequirePermissions(NPermissions) /* Prompt user if required. */
+        .catch(req => {
+            /* Don't have necessary permissions to run properly. Exiting. */
+            navigator
+            .notification
+            .alert("Permissions must be granted to this application: " + req, () => {
+                /* Leave "kiosk" mode. Release control of Home/Settings. */
+                Environment.exit();
+            }, "Authentication Required", "Exit");
+        })
+        .then(Environment.setup) /* Configure network/storage/environment. */
+        .then(Updater.update) /* Attempt to update "view". */
+        .then(Environment.render) /* Render the latest view (freshly loaded or cached). */
+        .catch(err => {
+            tablet.status(
+                "Failed to configure the Brevada Feedback System." +
+                "<br /><br />" +
+                "Please call 1-(844)-BREVADA."
+            );
+        });
+    }, false);
 });
