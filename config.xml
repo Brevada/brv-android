@@ -24,7 +24,7 @@
     <preference name="ShowTitle" value="false" />
     <preference name="HideKeyboardFormAccessoryBar" value="true" />
     <preference name="android-minSdkVersion" value="19" />
-    <preference name="android-targetSdkVersion" value="19" />
+    <preference name="android-targetSdkVersion" value="21" />
     <preference name="AndroidLaunchMode" value="singleInstance" />
     <icon src="res/icon.png" />
     <platform name="android">

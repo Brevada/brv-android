@@ -50,7 +50,9 @@ docReady(() => {
             tablet.status(
                 "Failed to configure the Brevada Feedback System." +
                 "<br /><br />" +
-                "Please call 1-(844)-BREVADA."
+                "Please call 1-(844)-BREVADA." +
+                "<br /><br />" +
+                (err || '').toString()
             );
         });
     }, false);

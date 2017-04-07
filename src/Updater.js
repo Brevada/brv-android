@@ -68,7 +68,7 @@ const Updater = (function (undefined) {
      * @return string[] The files to load into the app container.
      */
     updater.update = env => (
-        env.isOnline.then(() => (
+        env.isOnline().then(() => (
             /* Connected. */
             updater.getMasterVersion().then(response => {
                 let master = response.data.version || undefined;

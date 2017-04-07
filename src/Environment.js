@@ -3,6 +3,7 @@
  */
 
 import dbStorage from 'lib/Storage';
+import low from 'lowdb';
 
  const Environment = (function (undefined) {
      let environment = {}; /* Environment namespace. */
@@ -117,7 +118,7 @@ import dbStorage from 'lib/Storage';
          window.resolveLocalFileSystemURL(cordova.file.applicationDirectory, entry => {
              _appDirectory = entry.toURL() + 'www/';
              window.resolveLocalFileSystemURL(cordova.file.dataDirectory, _dataDirectoryEntry => {
-                 _dataDirectory = entry.toURL();
+                 _dataDirectory = _dataDirectoryEntry.toURL();
                  resolve(_dataDirectoryEntry);
              }, reject);
          }, reject);
@@ -144,17 +145,21 @@ import dbStorage from 'lib/Storage';
              storage: dbStorage(dataEntry)
          };
 
-         _dbConfig = low('config.json', dbOptions);
-         _dbData = low('offline_data.json', dbOptions);
+         /* Load and save each storage device. */
 
-         return Promise.all([
+         return low('config.json', dbOptions)
+         .then(db => _dbConfig = db)
+         .then(() => low('offline_data.json', dbOptions))
+         .then(db => _dbData = db)
+         .then(() => Promise.all([
+             /* Ensure defaults. */
              _dbConfig.defaults({
                  'version': 0
              }).write(),
              _dbData.defaults({
                  payloads: []
              }).write()
-         ]);
+         ]));
      };
 
      environment.getDBConfig = () => _dbConfig;

@@ -13,7 +13,7 @@ tablet.status = msg => {
     );
 
     if (p) {
-        p.innerHtml = msg;
+        p.innerHTML = msg;
     }
 };
 
