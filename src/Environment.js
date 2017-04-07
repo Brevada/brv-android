@@ -39,7 +39,7 @@ import dbStorage from 'lib/Storage';
       * Locks application, preventing unauthorized user exit.
       */
      environment.lock = () => {
-         PreventExit.enable();
+         window.plugins.preventExit.enable();
          document.addEventListener('backbutton', environment.onBackButton, false);
      };
 
@@ -47,7 +47,7 @@ import dbStorage from 'lib/Storage';
       * Exits the application.
       */
      environment.exit = () => {
-         PreventExit.disable();
+         window.plugins.preventExit.disable();
          navigator.app.exitApp();
      };
 
@@ -152,9 +152,9 @@ import dbStorage from 'lib/Storage';
      environment.render = files => {
          for (let file of files) {
              if (file.endsWith('.css')) {
-
+                 tablet.status("Importing: " + file);
              } else if (file.endsWith('.js')) {
-
+                 tablet.status("Importing: " + file);
              }
          }
      };

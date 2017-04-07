@@ -1,12 +1,13 @@
 {
   "name": "brv-android",
   "version": "0.0.4",
+  "private": true,
   "scripts": {
     "dev-build-js": "webpack",
     "build-js": "webpack -p --config ./webpack.prod.config.js",
     "dev-build": "npm run dev-build-js && cordova build",
-    "build": "npm run build-js && cordova build",
-    "postinstall": "cordova platform add android@4.1.1 && cordova prepare"
+    "build": "npm run build-js && cordova build --release",
+    "postinstall": "cordova prepare"
   },
   "repository": {
     "type": "git",
@@ -27,6 +28,7 @@
     "babel-plugin-transform-react-jsx": "^6.8.0",
     "babel-preset-es2015": "^6.18.0",
     "babel-preset-react": "^6.16.0",
+    "cordova": "^6.5.0",
     "webpack": "^2.2.1"
   },
   "dependencies": {
