@@ -76,21 +76,22 @@ const Updater = (function (undefined) {
                 /* Check if we're up to date. */
                 let localVersion = env.getDBConfig().get('version').value();
                 if (localVersion === master) {
+                    /* Up to date. */
                     return Promise.resolve(localVersion);
                 } else {
                     window.tablet && tablet.status("Update available...");
                     return Promise.reject({
                         local: localVersion,
                         master: master
-                    });
+                    }).catch(() => updater.download(env));
                 }
-            }).catch(version => (
-                /* Version mismatch. */
-                updater.download(env)
-            ))
-        ), () => {
-            /* No internet connection. Operate in offline mode. */
-            window.tablet && tablet.status("No connection. Operating in offline mode...");
+            }, (err) => {
+                console.debug("Unable to reach Brevada servers.");
+                return Promise.reject();
+            })
+        )).catch(() => {
+            /* No internet connection / cannot reach servers. Operate in offline mode. */
+            window.tablet && tablet.status("Operating in offline mode...");
             // TODO: get cached files
             return Promise.resolve([]);
         })
