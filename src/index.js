@@ -43,6 +43,7 @@ docReady(() => {
                 Environment.exit();
             }, "Authentication Required", "Exit");
         })
+        .then(Environment.expose) /* Exposes environment to global scope. */
         .then(Environment.setup) /* Configure network/storage/environment. */
         .then(Updater.update) /* Attempt to update "view". */
         .then(Environment.render) /* Render the latest view (freshly loaded or cached). */

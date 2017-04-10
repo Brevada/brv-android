@@ -4,9 +4,14 @@
 
 import dbStorage from 'lib/Storage';
 import low from 'lowdb';
+import axios from 'axios';
 
  const Environment = (function (undefined) {
      let environment = {}; /* Environment namespace. */
+     environment.auth = {}; /* Authentication namespace. */
+
+     environment.DOMAIN = 'http://192.168.1.115';//'http://beta.brevada.com';
+     environment.API_URL = environment.DOMAIN + '/api/v1.1';
 
      let _appDirectory = undefined; /* Resolved path to www dir. */
      let _dataDirectory = undefined; /* Private & persistant data storage dir. */
@@ -136,6 +141,101 @@ import low from 'lowdb';
      });
 
      /**
+      * Gets the request token from the user.
+      */
+     environment.auth.getRequestToken = () => new Promise((resolve, reject) => {
+         navigator.notification.prompt(
+            "Please enter the 'request token' to register the device.",
+            res => {
+                if (res.buttonIndex === 1) {
+                    resolve(res.input1);
+                } else {
+                    reject();
+                }
+            },
+            "Register",
+            ['Register', 'Not Now'],
+            ''
+         );
+     });
+
+     /**
+      * Registers for an access token using a user supplied request token.
+      */
+     environment.auth.register = () => (
+         environment.getDeviceId().then(deviceId => (
+             environment.auth.getRequestToken().then(requestToken => (
+                 axios.post(brv.env.API_URL + '/device/register', {
+                     device_id: deviceId,
+                     request_token: requestToken
+                 }).then(res => (
+                     _dbConfig
+                     .set('credentials.access_token', res.data.access_token)
+                     .set('credentials.expiry_date', res.data.expiry_date)
+                     .set('credentials.renewal_date', res.data.renewal_date)
+                     .write()
+                 ))
+             ))
+         ))
+     );
+
+     /**
+      * Renews an access token.
+      */
+     environment.auth.renew = () => (
+         environment.getDeviceId().then(deviceId => (
+             _dbConfig.get('credentials.access_token').value().then(accessToken => (
+                 axios.post(brv.env.API_URL + '/device/renew', {
+                     device_id: deviceId,
+                     access_token: accessToken
+                 }).then(res => (
+                     _dbConfig
+                     .set('credentials.access_token', res.data.access_token)
+                     .set('credentials.expiry_date', res.data.expiry_date)
+                     .set('credentials.renewal_date', res.data.renewal_date)
+                     .write()
+                 )).catch(() => (
+                     /* Renewal failed. Delay an additional 2 hours. */
+                     _dbConfig.get('credentials').value().then(cred => (
+                         _dbConfig.set(
+                             'credentials.renewal_date',
+                             /* Force the renewal date to be at least an hour before
+                              * expiry. */
+                             Math.min(cred.expiry_date - 3600, cred.renewal_date + (2*3600))
+                         ).write()
+                     ))
+                 ))
+             ))
+         ))
+     );
+
+     /**
+      * Asserts unexpired authentication credentials, initiating register or
+      * renewal process if required.
+      */
+     environment.auth.require = () => _dbConfig.get('credentials').value().then(cred => {
+         let now = (+new Date())/1000;
+         if (cred.expiry_date < now) {
+             /* Expired. */
+             window.tablet && tablet.status("Registering device...");
+             return environment.auth.register();
+         } else if (cred.renewal_date < now) {
+             /* Time for renewal, but don't fail if not successful. */
+             window.tablet && tablet.status("Renewing credentials...");
+             return environment.auth.renew();
+         } else {
+             /* Acquired the token "recently". */
+             if (cred.access_token) {
+                 return Promise.resolve(cred.access_token);
+             } else {
+                 /* Unknown error. This scenario should not have happened. */
+                 console.error("No access token, but not expired.");
+                 return environment.auth.register();
+             }
+         }
+     });
+
+     /**
       * Initializes databases.
       */
      environment.setupDB = dataEntry => {
@@ -154,7 +254,12 @@ import low from 'lowdb';
          .then(() => Promise.all([
              /* Ensure defaults. */
              _dbConfig.defaults({
-                 'version': 0
+                 'version': 0,
+                 'credentials': {
+                     'access_token': null,
+                     'expiry_date': 0,
+                     'renewal_date': 0
+                 }
              }).write(),
              _dbData.defaults({
                  payloads: []
@@ -186,8 +291,18 @@ import low from 'lowdb';
          environment.getDeviceId()
          .then(environment.resolveFileSystem)
          .then(environment.setupDB)
-         .then(() => Promise.resolve(environment))
+         .then(() => Promise.resolve())
      );
+
+     /**
+      * Exposes environment to global scope.
+      */
+      environment.expose = () => {
+          window.brv = window.brv || {};
+          window.brv.environment = environment;
+          window.brv.env = window.brv.environment;
+          return Promise.resolve(window.brv.env);
+      };
 
      return environment;
  })();

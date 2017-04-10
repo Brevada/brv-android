@@ -18,7 +18,7 @@ Brevada Android app
 ```
 
 ### Pre-requisites
-Install npm (min. 4.0.2) from https://nodejs.org/en/download/ and install the Android SDK from http://developer.android.com/sdk/index.html
+Install npm (min. 4.0.2) from https://nodejs.org/en/download/ and install the Android SDK from https://developer.android.com/studio/ (you don't need the full Android Studio, but you may want it anyway).
 
 Install cordova (min. 6.4.0) globally:
 ```

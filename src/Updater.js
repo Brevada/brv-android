@@ -4,33 +4,34 @@
 
 import axios from 'axios';
 
+/**
+ * Responsible for updating the software from the server, and managing
+ * offline caching and fallbacks.
+ */
 const Updater = (function (undefined) {
     let updater = {};
-
-    const DOMAIN = 'http://beta.brevada.com';
-    const API_URL = DOMAIN + '/api/v1.1';
-
-    /* Reference to environment. */
-    let _env = undefined;
 
     /**
      * Gets the latest feedback software version.
      */
-    updater.getMasterVersion = () => axios.get(API_URL + '/feedback/version');
+    updater.getMasterVersion = () => (
+        env.auth.require().then(() => (
+            axios.get(brv.env.API_URL + '/feedback/version')
+        ))
+    );
 
     /**
      * Downloads an individual file from the bundle.
      */
-    updater.downloadFile = (id, name) => (
-        env.getDeviceId().then(deviceId => {
-            let fileUrl = API_URL + '/feedback/bundle/' + id;
+    updater.downloadFile = (dir, id, name) => (
+        brv.env.getDeviceId().then(deviceId => {
+            let uri = brv.env.API_URL + '/feedback/bundle/' + id;
             let fileTransfer = new FileTransfer();
             return new Promise((resolve, reject) => {
-                let fp = cordova.file.dataDirectory + 'latest/' + name;
-                window.resolveLocalFileSystemURL(fp, entry => {
-                    fileTransfer.download(fileUrl, fp, fileEntry => {
-                        resolve(fileEntry.toURL());
-                    }, reject);
+                dir.getFile(name, { create: true }, entry => {
+                    fileTransfer.download(uri, entry.toURL(), dlEntry => {
+                        resolve(dlEntry.toURL());
+                    }, (err) => { console.log(err); reject(err); });
                 }, reject);
             });
         })
@@ -39,13 +40,11 @@ const Updater = (function (undefined) {
     /**
      * Downloads the latest feedback system.
      */
-    updater.download = env => (
-        (_env = env) &&
-        env.isOnline()
-        .then(env.getDeviceId)
-        .then(deviceId => axios.get(API_URL + '/feedback/bundle', {
-            params: { deviceId: deviceId }
-        }))
+    updater.download = () => (
+        brv.env.isOnline()
+        .then(env.auth.require)
+        .then(brv.env.getDeviceId)
+        .then(() => axios.get(brv.env.API_URL + '/feedback/bundle'))
         .then(response => {
             if (!response.data.files) return Promise.reject();
 
@@ -54,9 +53,9 @@ const Updater = (function (undefined) {
                 window.resolveLocalFileSystemURL(cordova.file.dataDirectory, dirEntry => {
                     dirEntry.getDirectory('latest', { create: true }, resolve, reject);
                 }, reject);
-            }).then(() => (
+            }).then(dir => (
                 Promise.all(response.data.files.map(
-                    file => updater.downloadFile(file.id, file.name)
+                    file => updater.downloadFile(dir, file.id, file.name)
                 ))
             ));
         })
@@ -67,14 +66,14 @@ const Updater = (function (undefined) {
      *
      * @return string[] The files to load into the app container.
      */
-    updater.update = env => (
-        env.isOnline().then(() => (
+    updater.update = () => (
+        brv.env.isOnline().then(() => (
             /* Connected. */
             updater.getMasterVersion().then(response => {
                 let master = response.data.version || undefined;
 
                 /* Check if we're up to date. */
-                let localVersion = env.getDBConfig().get('version').value();
+                let localVersion = brv.env.getDBConfig().get('version').value();
                 if (localVersion === master) {
                     /* Up to date. */
                     return Promise.resolve(localVersion);
@@ -83,7 +82,7 @@ const Updater = (function (undefined) {
                     return Promise.reject({
                         local: localVersion,
                         master: master
-                    }).catch(() => updater.download(env));
+                    }).catch(() => updater.download(brv.env));
                 }
             }, (err) => {
                 console.debug("Unable to reach Brevada servers.");
