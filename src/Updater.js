@@ -59,7 +59,7 @@ const Updater = (function (undefined) {
             return new Promise((resolve, reject) => {
                 /* Create directory if it doesn't exist. */
                 window.resolveLocalFileSystemURL(cordova.file.dataDirectory, dirEntry => {
-                    dirEntry.getDirectory('latest', { create: true }, resolve, reject);
+                    dirEntry.getDirectory(brv.env.DYNAMIC_APP_DIR, { create: true }, resolve, reject);
                 }, err => reject(new FileSystemError(err)));
             }).then(dir => (
                 Promise.all(response.data.files.map(
@@ -68,6 +68,25 @@ const Updater = (function (undefined) {
             ));
         })
     );
+
+    /**
+     * Resolves an array of the "cached" files, i.e. the contents of
+     * "latest/".
+     */
+    updater.getCachedFiles = () => (new Promise ((resolve, reject) => {
+        window.resolveLocalFileSystemURL(cordova.file.dataDirectory, dirEntry => {
+            dirEntry.getDirectory(brv.env.DYNAMIC_APP_DIR, { create: false }, (latestEntry) => {
+                let reader = latestEntry.createReader();
+                reader.readEntries(entries => {
+                    /* Filter out .* (hidden files) and directories. */
+                    resolve(
+                        entries.filter(e => e.isFile && e.name.indexOf('.') !== 0)
+                               .map(e => e.toURL())
+                    );
+                }, () => resolve([]));
+            }, () => resolve([]));
+        }, err => reject(new FileSystemError(err)));
+    }));
 
     /**
      * Updates system on version mismatch.
@@ -86,13 +105,13 @@ const Updater = (function (undefined) {
 
                 if (localVersion === master) {
                     /* Up to date. */
-                    return Promise.resolve(localVersion);
+                    return updater.getCachedFiles();
                 } else {
                     window.tablet && tablet.status("Update available...");
                     return updater.download().then(() => Promise.resolve(
                         /* On success, update local version. */
                         brv.env.getDBConfig().set('version', master).write()
-                    ));
+                    ).then(updater.getCachedFiles));
                 }
             }, (err) => {
                 console.debug("Unable to reach Brevada servers.");
@@ -101,8 +120,7 @@ const Updater = (function (undefined) {
         )).catch(() => {
             /* No internet connection / cannot reach servers. Operate in offline mode. */
             window.tablet && tablet.status("Operating in offline mode...");
-            // TODO: get cached files in array
-            return Promise.resolve([]);
+            return updater.getCachedFiles();
         })
     );
 

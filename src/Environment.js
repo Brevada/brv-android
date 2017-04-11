@@ -5,7 +5,7 @@
 import dbStorage from 'lib/Storage';
 import low from 'lowdb';
 import axios from 'axios';
-import path from 'path';
+import pathjs from 'path';
 import { AxiosErrorWrapper, PluginError, FileSystemError } from 'lib/Errors';
 
  const Environment = (function (undefined) {
@@ -14,6 +14,7 @@ import { AxiosErrorWrapper, PluginError, FileSystemError } from 'lib/Errors';
 
      environment.DOMAIN = 'http://192.168.1.115';//'http://beta.brevada.com';
      environment.API_URL = environment.DOMAIN + '/api/v1.1';
+     environment.DYNAMIC_APP_DIR = 'latest'; /* Location of downloaded application files. */
 
      let _appDirectory = undefined; /* Resolved path to www dir. */
      let _dataDirectory = undefined; /* Private & persistant data storage dir. */
@@ -130,6 +131,11 @@ import { AxiosErrorWrapper, PluginError, FileSystemError } from 'lib/Errors';
              }, err => reject(new FileSystemError(err)));
          }, err => reject(new FileSystemError(err)));
      });
+
+     /**
+      * Gets the data directory.
+      */
+     environment.getDataDirectory = () => _dataDirectory;
 
      /**
       * Tests internet connection (not connectivity to server).
@@ -294,17 +300,33 @@ import { AxiosErrorWrapper, PluginError, FileSystemError } from 'lib/Errors';
 
      /**
       * Imports files into app container.
-      * @TODO unimplemented
       */
      environment.render = files => {
+         files = files.concat().sort();
+
          for (let file of files) {
-             let basename = path.basename(file);
+             let basename = pathjs.basename(file);
              if (file.endsWith('.css')) {
                  tablet.status("Importing: " + basename);
+
+                 /* Add CSS link to DOM. */
+                 let ref = document.createElement("link");
+                 ref.rel = 'stylesheet';
+                 ref.type = 'text/css';
+                 ref.href = file;
+                 document.getElementsByTagName('head')[0].appendChild(ref);
              } else if (file.endsWith('.js')) {
                  tablet.status("Importing: " + basename);
+
+                 /* Add JS script to DOM. */
+                 let ref = document.createElement("script");
+                 ref.type = 'text/javascript';
+                 ref.src = file;
+                 document.getElementsByTagName('head')[0].appendChild(ref);
              }
          }
+
+         return Promise.resolve();
      };
 
      /**

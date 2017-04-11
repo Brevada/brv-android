@@ -11,9 +11,27 @@ import Globals from 'Globals';
 
 import Environment from 'Environment';
 import Updater from 'Updater';
+import pathjs from 'path';
 
 /* Necessary Permissions */
 const NPermissions = ['ACCESS_COARSE_LOCATION', 'ACCESS_FINE_LOCATION'];
+
+window.addEventListener('error', (e) => {
+    let dir = Environment.getDataDirectory();
+    if (dir) {
+        dir = dir + Environment.DYNAMIC_APP_DIR;
+
+        if (e.filename && e.filename.indexOf(dir) === 0) {
+            /* From a dynamically loaded script. */
+            console.error("Dynamically loaded script raised an error.");
+            console.error("Faulty script: " + pathjs.basename(e.filename));
+            console.error(e.error);
+            return;
+        }
+    }
+
+    throw e.error;
+}, false);
 
 docReady(() => {
     tablet.status("Preparing device...");
@@ -22,7 +40,7 @@ docReady(() => {
     var img = new Image();
     img.onload = () => {
         /* When the "loading" image has fully loaded, display it. */
-        let elLoader = document.querySelector('#cordova-app div.cordova-loading');
+        let elLoader = document.querySelector('#feedback-root div.cordova-loading');
         if (elLoader) elLoader.className = 'cordova-loading visible';
     };
     img.src = 'img/brevada.png';
