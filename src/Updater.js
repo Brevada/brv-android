@@ -3,6 +3,7 @@
  */
 
 import axios from 'axios';
+import { AxiosErrorWrapper, FileSystemError } from 'lib/Errors';
 
 /**
  * Responsible for updating the software from the server, and managing
@@ -15,23 +16,26 @@ const Updater = (function (undefined) {
      * Gets the latest feedback software version.
      */
     updater.getMasterVersion = () => (
-        env.auth.require().then(() => (
-            axios.get(brv.env.API_URL + '/feedback/version')
-        ))
+        brv.env.auth.require().then(access_token => (
+            axios.get(
+                brv.env.API_URL + '/feedback/version',
+                brv.env.auth.getHeaders(access_token)
+            )
+        )).catch(AxiosErrorWrapper)
     );
 
     /**
      * Downloads an individual file from the bundle.
      */
     updater.downloadFile = (dir, id, name) => (
-        brv.env.getDeviceId().then(deviceId => {
+        brv.env.auth.require().then(access_token => {
             let uri = brv.env.API_URL + '/feedback/bundle/' + id;
             let fileTransfer = new FileTransfer();
             return new Promise((resolve, reject) => {
                 dir.getFile(name, { create: true }, entry => {
                     fileTransfer.download(uri, entry.toURL(), dlEntry => {
                         resolve(dlEntry.toURL());
-                    }, (err) => { console.log(err); reject(err); });
+                    }, reject, false, brv.env.auth.getHeaders(access_token));
                 }, reject);
             });
         })
@@ -42,17 +46,21 @@ const Updater = (function (undefined) {
      */
     updater.download = () => (
         brv.env.isOnline()
-        .then(env.auth.require)
-        .then(brv.env.getDeviceId)
-        .then(() => axios.get(brv.env.API_URL + '/feedback/bundle'))
+        .then(brv.env.auth.require)
+        .then(access_token => (
+            axios.get(
+                brv.env.API_URL + '/feedback/bundle',
+                brv.env.auth.getHeaders(access_token)
+            )
+            .catch(AxiosErrorWrapper)
+        ))
         .then(response => {
             if (!response.data.files) return Promise.reject();
-
             return new Promise((resolve, reject) => {
                 /* Create directory if it doesn't exist. */
                 window.resolveLocalFileSystemURL(cordova.file.dataDirectory, dirEntry => {
                     dirEntry.getDirectory('latest', { create: true }, resolve, reject);
-                }, reject);
+                }, err => reject(new FileSystemError(err)));
             }).then(dir => (
                 Promise.all(response.data.files.map(
                     file => updater.downloadFile(dir, file.id, file.name)
@@ -74,15 +82,17 @@ const Updater = (function (undefined) {
 
                 /* Check if we're up to date. */
                 let localVersion = brv.env.getDBConfig().get('version').value();
+                console.debug(`Version: Local(${localVersion}) - Master(${master})`);
+
                 if (localVersion === master) {
                     /* Up to date. */
                     return Promise.resolve(localVersion);
                 } else {
                     window.tablet && tablet.status("Update available...");
-                    return Promise.reject({
-                        local: localVersion,
-                        master: master
-                    }).catch(() => updater.download(brv.env));
+                    return updater.download().then(() => Promise.resolve(
+                        /* On success, update local version. */
+                        brv.env.getDBConfig().set('version', master).write()
+                    ));
                 }
             }, (err) => {
                 console.debug("Unable to reach Brevada servers.");
@@ -91,7 +101,7 @@ const Updater = (function (undefined) {
         )).catch(() => {
             /* No internet connection / cannot reach servers. Operate in offline mode. */
             window.tablet && tablet.status("Operating in offline mode...");
-            // TODO: get cached files
+            // TODO: get cached files in array
             return Promise.resolve([]);
         })
     );

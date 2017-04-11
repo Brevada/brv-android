@@ -5,6 +5,8 @@
 import dbStorage from 'lib/Storage';
 import low from 'lowdb';
 import axios from 'axios';
+import path from 'path';
+import { AxiosErrorWrapper, PluginError, FileSystemError } from 'lib/Errors';
 
  const Environment = (function (undefined) {
      let environment = {}; /* Environment namespace. */
@@ -40,7 +42,7 @@ import axios from 'axios';
          } else {
              window.plugins.uniqueDeviceID.get(u => {
                  resolve(_deviceId = u)
-             }, reject);
+             }, err => reject(new PluginError(err)));
          }
      });
 
@@ -125,8 +127,8 @@ import axios from 'axios';
              window.resolveLocalFileSystemURL(cordova.file.dataDirectory, _dataDirectoryEntry => {
                  _dataDirectory = _dataDirectoryEntry.toURL();
                  resolve(_dataDirectoryEntry);
-             }, reject);
-         }, reject);
+             }, err => reject(new FileSystemError(err)));
+         }, err => reject(new FileSystemError(err)));
      });
 
      /**
@@ -136,7 +138,7 @@ import axios from 'axios';
          if (navigator.connection.type != Connection.NONE && navigator.connection.type != Connection.UNKNOWN) {
              resolve();
          } else {
-             reject(navigator.connection.type);
+             reject();
          }
      });
 
@@ -154,10 +156,17 @@ import axios from 'axios';
                 }
             },
             "Register",
-            ['Register', 'Not Now'],
+            ['Register'],
             ''
          );
      });
+
+     /**
+      * Get access token. Does not register or renew, just accesses cache.
+      */
+     environment.auth.getAccessToken = () => {
+         return Promise.resolve(_dbConfig.get('credentials.access_token', null).value())
+     };
 
      /**
       * Registers for an access token using a user supplied request token.
@@ -168,15 +177,20 @@ import axios from 'axios';
                  axios.post(brv.env.API_URL + '/device/register', {
                      device_id: deviceId,
                      request_token: requestToken
-                 }).then(res => (
+                 })
+                 .catch(AxiosErrorWrapper)
+                 .then(res => Promise.resolve(
                      _dbConfig
                      .set('credentials.access_token', res.data.access_token)
                      .set('credentials.expiry_date', res.data.expiry_date)
                      .set('credentials.renewal_date', res.data.renewal_date)
                      .write()
                  ))
-             ))
-         ))
+             )).catch(err => {
+                 /* User did not provide request token or token invalid. */
+                 return environment.auth.getRequestToken();
+             })
+         )).then(environment.auth.getAccessToken)
      );
 
      /**
@@ -184,36 +198,38 @@ import axios from 'axios';
       */
      environment.auth.renew = () => (
          environment.getDeviceId().then(deviceId => (
-             _dbConfig.get('credentials.access_token').value().then(accessToken => (
+             environment.auth.getAccessToken().then(accessToken => (
                  axios.post(brv.env.API_URL + '/device/renew', {
                      device_id: deviceId,
                      access_token: accessToken
-                 }).then(res => (
+                 })
+                 .catch(AxiosErrorWrapper)
+                 .then(res => Promise.resolve(
                      _dbConfig
                      .set('credentials.access_token', res.data.access_token)
                      .set('credentials.expiry_date', res.data.expiry_date)
                      .set('credentials.renewal_date', res.data.renewal_date)
                      .write()
-                 )).catch(() => (
+                 )).catch(() => {
                      /* Renewal failed. Delay an additional 2 hours. */
-                     _dbConfig.get('credentials').value().then(cred => (
-                         _dbConfig.set(
-                             'credentials.renewal_date',
-                             /* Force the renewal date to be at least an hour before
-                              * expiry. */
-                             Math.min(cred.expiry_date - 3600, cred.renewal_date + (2*3600))
-                         ).write()
-                     ))
-                 ))
+                     let cred = _dbConfig.get('credentials').value();
+                     return Promise.resolve(_dbConfig.set(
+                         'credentials.renewal_date',
+                         /* Force the renewal date to be at least an hour before
+                          * expiry. */
+                         Math.min(cred.expiry_date - 3600, cred.renewal_date + (2*3600))
+                     ).write());
+                 })
              ))
-         ))
+         )).then(environment.auth.getAccessToken)
      );
 
      /**
       * Asserts unexpired authentication credentials, initiating register or
-      * renewal process if required.
+      * renewal process if required. Resolves access token.
       */
-     environment.auth.require = () => _dbConfig.get('credentials').value().then(cred => {
+     environment.auth.require = () => {
+         let cred = _dbConfig.get('credentials').value();
          let now = (+new Date())/1000;
          if (cred.expiry_date < now) {
              /* Expired. */
@@ -232,6 +248,12 @@ import axios from 'axios';
                  console.error("No access token, but not expired.");
                  return environment.auth.register();
              }
+         }
+     };
+
+     environment.auth.getHeaders = access_token => ({
+         headers: {
+             'Authorization': 'Bearer ' + access_token
          }
      });
 
@@ -276,10 +298,11 @@ import axios from 'axios';
       */
      environment.render = files => {
          for (let file of files) {
+             let basename = path.basename(file);
              if (file.endsWith('.css')) {
-                 tablet.status("Importing: " + file);
+                 tablet.status("Importing: " + basename);
              } else if (file.endsWith('.js')) {
-                 tablet.status("Importing: " + file);
+                 tablet.status("Importing: " + basename);
              }
          }
      };
