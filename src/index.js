@@ -10,6 +10,7 @@ import RequirePermissions from 'lib/RequirePermissions';
 import Globals from 'Globals';
 
 import Environment from 'Environment';
+import Interceptor from 'Interceptor';
 import Updater from 'Updater';
 import pathjs from 'path';
 
@@ -63,16 +64,16 @@ docReady(() => {
         })
         .then(Environment.expose) /* Exposes environment to global scope. */
         .then(Environment.setup) /* Configure network/storage/environment. */
+        .then(Interceptor.expose) /* Exposes interceptor to global scope. */
         .then(Updater.update) /* Attempt to update "view". */
         .then(Environment.render) /* Render the latest view (freshly loaded or cached). */
         .catch(err => {
             tablet.status(
                 "Failed to configure the Brevada Feedback System." +
                 "<br /><br />" +
-                "Please call 1-(844)-BREVADA." +
-                "<br /><br />" +
-                (err || '').toString()
+                "Please call 1-(844)-BREVADA."
             );
+            console.error(err);
         });
     }, false);
 });

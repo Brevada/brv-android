@@ -61,7 +61,7 @@ const Updater = (function (undefined) {
                 window.resolveLocalFileSystemURL(cordova.file.dataDirectory, dirEntry => {
                     dirEntry.getDirectory(brv.env.DYNAMIC_APP_DIR, { create: true }, resolve, reject);
                 }, err => reject(new FileSystemError(err)));
-            }).then(dir => (
+            }).then(dir => updater.removeCachedFiles().then(
                 Promise.all(response.data.files.map(
                     file => updater.downloadFile(dir, file.id, file.name)
                 ))
@@ -85,6 +85,28 @@ const Updater = (function (undefined) {
                     );
                 }, () => resolve([]));
             }, () => resolve([]));
+        }, err => reject(new FileSystemError(err)));
+    }));
+
+    /**
+     * Removes all files from "latest/"
+     */
+    updater.removeCachedFiles = () => (new Promise ((resolve, reject) => {
+        window.resolveLocalFileSystemURL(cordova.file.dataDirectory, dirEntry => {
+            dirEntry.getDirectory(brv.env.DYNAMIC_APP_DIR, { create: false }, (latestEntry) => {
+                let reader = latestEntry.createReader();
+                reader.readEntries(entries => {
+                    /* Filter out .* (hidden files) and directories. */
+                    resolve(Promise.all(
+                        entries.filter(e => e.isFile && e.name.indexOf('.') !== 0)
+                        .map(e => {
+                            return new Promise((resolve, reject) => {
+                                e.remove(resolve, err => reject(err));
+                            });
+                        })
+                    ));
+                }, reject);
+            }, resolve); /* If directory doesn't exist, ignore. */
         }, err => reject(new FileSystemError(err)));
     }));
 

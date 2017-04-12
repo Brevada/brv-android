@@ -1,9 +1,9 @@
-* {
+html.default-state * {
     -webkit-tap-highlight-color: rgba(0,0,0,0); /* make transparent link selection, adjust last value opacity 0 to 1.0 */
 }
 
-html { width: 100%; height: 100%; padding: 0; margin: 0; }
-body {
+html.default-state { width: 100%; height: 100%; padding: 0; margin: 0; }
+html.default-state body {
     -webkit-touch-callout: none;                /* prevent callout to copy image, etc when tap to hold */
     -webkit-text-size-adjust: none;             /* prevent webkit from resizing text to fit */
     -webkit-user-select: none;                  /* prevent copy paste, to allow, change 'none' to 'text' */
@@ -19,7 +19,7 @@ body {
 }
 
 /* Portrait layout (default) */
-#feedback-root {
+html.default-state #feedback-root {
     width: 100%;
 	height: 100%;
 	padding: 0;
@@ -27,7 +27,7 @@ body {
 	display: block;
 }
 
-#feedback-root div.cordova-loading {
+html.default-state #feedback-root div.cordova-loading {
     text-align: center;
     width: 90%;
     height: 100%;
@@ -40,12 +40,12 @@ body {
     -webkit-transition: 0.8s opacity ease;
     transition: 0.8s opacity ease;
 }
-#feedback-root div.cordova-loading.visible { opacity: 1; }
-#feedback-root div.cordova-loading > img { height: auto; max-width: 100%; margin-top: 65%; }
-#feedback-root div.cordova-loading > h1 { font-size: 3em; }
-#feedback-root div.cordova-loading p { font-size: 1.8em; }
+html.default-state #feedback-root div.cordova-loading.visible { opacity: 1; }
+html.default-state #feedback-root div.cordova-loading > img { height: auto; max-width: 100%; margin-top: 65%; }
+html.default-state #feedback-root div.cordova-loading > h1 { font-size: 3em; }
+html.default-state #feedback-root div.cordova-loading p { font-size: 1.8em; }
 
-#feedback-root div.cordova-loading span.app-uuid { font-size: 0.55em; position: absolute; bottom: 10px; right: 15px; display: block; text-align: center; padding: 0; margin: 0; z-index: 999999; }
+html.default-state #feedback-root div.cordova-loading span.app-uuid { font-size: 0.55em; position: absolute; bottom: 10px; right: 15px; display: block; text-align: center; padding: 0; margin: 0; z-index: 999999; }
 
 @keyframes cordova-fade {
     from { opacity: 1.0; }
@@ -59,7 +59,19 @@ body {
     to { opacity: 1.0; }
 }
 
-#feedback-root .cordova-loading .blink {
+html.default-state #feedback-root .cordova-loading .blink {
     animation: cordova-fade 3000ms infinite;
     -webkit-animation: cordova-fade 3000ms infinite;
+}
+
+@font-face {
+  font-family: 'FontAwesome';
+  src: url('../fonts/font-awesome/fontawesome-webfont.eot');
+  src: url('../fonts/font-awesome/fontawesome-webfont.eot?#iefix') format('embedded-opentype'),
+    url('../fonts/font-awesome/fontawesome-webfont.woff2') format('woff2'),
+    url('../fonts/font-awesome/fontawesome-webfont.woff') format('woff'),
+    url('../fonts/font-awesome/fontawesome-webfont.ttf') format('truetype'),
+    url('../fonts/font-awesome/fontawesome-webfont.svg#fontawesomeregular') format('svg');
+  font-weight: normal;
+  font-style: normal;
 }

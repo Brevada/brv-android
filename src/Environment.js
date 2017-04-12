@@ -12,6 +12,8 @@ import { AxiosErrorWrapper, PluginError, FileSystemError } from 'lib/Errors';
      let environment = {}; /* Environment namespace. */
      environment.auth = {}; /* Authentication namespace. */
 
+     environment.IS_DEVICE = true;
+
      environment.DOMAIN = 'http://192.168.1.115';//'http://beta.brevada.com';
      environment.API_URL = environment.DOMAIN + '/api/v1.1';
      environment.DYNAMIC_APP_DIR = 'latest'; /* Location of downloaded application files. */
@@ -302,7 +304,10 @@ import { AxiosErrorWrapper, PluginError, FileSystemError } from 'lib/Errors';
       * Imports files into app container.
       */
      environment.render = files => {
+         document.getElementsByTagName('html')[0].className = '';
          files = files.concat().sort();
+
+         let version = _dbConfig.get('version', 0).value();
 
          for (let file of files) {
              let basename = pathjs.basename(file);
@@ -314,6 +319,8 @@ import { AxiosErrorWrapper, PluginError, FileSystemError } from 'lib/Errors';
                  ref.rel = 'stylesheet';
                  ref.type = 'text/css';
                  ref.href = file;
+                 ref.setAttribute('data-version', version);
+
                  document.getElementsByTagName('head')[0].appendChild(ref);
              } else if (file.endsWith('.js')) {
                  tablet.status("Importing: " + basename);
@@ -321,7 +328,10 @@ import { AxiosErrorWrapper, PluginError, FileSystemError } from 'lib/Errors';
                  /* Add JS script to DOM. */
                  let ref = document.createElement("script");
                  ref.type = 'text/javascript';
+                 ref.async = false;
                  ref.src = file;
+                 ref.setAttribute('data-version', version);
+
                  document.getElementsByTagName('head')[0].appendChild(ref);
              }
          }
