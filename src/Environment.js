@@ -36,6 +36,23 @@ import { AxiosErrorWrapper, PluginError, FileSystemError } from 'lib/Errors';
          password: 'Brevada123' /* Admin password required to perform action. */
      };
 
+     /* On ready event fires when application software is ready to be used. */
+     let _onReady = {
+         handlers: [], /* Array of event handlers. */
+         fired: false /* Indicates event has already fired. */
+     };
+
+     let _battery = {
+         percent: null,
+         charging: null
+     };
+
+     let _position = {
+         longitude: null,
+         latitude: null,
+         timestamp: null
+     };
+
      /**
       * Get a unique device id which persists between device restarts.
       */
@@ -341,9 +358,101 @@ import { AxiosErrorWrapper, PluginError, FileSystemError } from 'lib/Errors';
      /**
       * Called by application to signal it is "ready" to be used.
       */
-     environment.onReady = () => {
+     environment.fireReady = () => {
          document.getElementsByTagName('html')[0].className = '';
          tablet.status("Ready.");
+
+         for (let handler of _onReady.handlers) {
+             setTimeout(() => handler(), 0); /* Defer */
+         }
+     };
+
+     /**
+      * Registers on ready event.
+      */
+     environment.onReady = (handler) => {
+         _onReady.handlers.push(handler);
+         if (_onReady.fired) {
+             setTimeout(() => handler(), 0); /* Defer */
+         }
+     };
+
+     /**
+      * Tracks battery status.
+      */
+     environment.watchBattery = () => {
+         window.addEventListener('batterystatus', status => {
+             _battery.charging = status.isPlugged;
+             _battery.percent = status.level;
+         });
+
+         return Promise.resolve();
+     };
+
+     /**
+      * Tracks GPS position.
+      */
+     environment.watchPosition = () => {
+         navigator.geolocation.watchPosition(pos => {
+             if (!pos || !pos.coords || !pos.coords.latitude || !pos.timestamp) {
+                 return;
+             }
+
+             _position.latitude = pos.coords.latitude;
+             _position.longitude = pos.coords.longitude;
+             _position.timestamp = pos.timestamp / 1000;
+         }, err => {
+             console.error(err.message);
+         }, {
+             maximumAge: 60000 * 30,
+             timeout: 10000,
+             enableHighAccuracy: true
+         });
+
+         return Promise.resolve();
+     };
+
+     /**
+      * Gets the battery data.
+      */
+     environment.getBattery = () => _battery;
+
+     /**
+      * Gets the position data.
+      */
+     environment.getPosition = () => _position;
+
+     /**
+      * Executes single or array of commands.
+      */
+     environment.execute = action => {
+         if (typeof action !== 'string') {
+             return Promise.all(
+                 action.map(a => Promise.resolve(
+                     environment.execute(a)
+                 ))
+             );
+         }
+
+         switch (action.toLowerCase()) {
+            case 'restart':
+                return Promise.resolve(environment.restart());
+                break;
+            case 'force-update':
+                return environment.getDBConfig()
+                       .set('version', 0).write().then(() => (
+                           Promise.resolve(environment.restart())
+                       ));
+                break;
+            case 'lock':
+                return environment.lock();
+                break;
+            case 'unlock':
+                return environment.unlock();
+                break;
+            default:
+                return Promise.reject();
+         }
      };
 
      /**
@@ -353,6 +462,8 @@ import { AxiosErrorWrapper, PluginError, FileSystemError } from 'lib/Errors';
          environment.getDeviceId()
          .then(environment.resolveFileSystem)
          .then(environment.setupDB)
+         .then(environment.watchBattery)
+         .then(environment.watchPosition)
          .then(() => Promise.resolve())
      );
 
