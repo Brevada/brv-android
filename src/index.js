@@ -41,7 +41,7 @@ docReady(() => {
     var img = new Image();
     img.onload = () => {
         /* When the "loading" image has fully loaded, display it. */
-        let elLoader = document.querySelector('#feedback-root div.cordova-loading');
+        let elLoader = document.querySelector('#cordova-app div.cordova-loading');
         if (elLoader) elLoader.className = 'cordova-loading visible';
     };
     img.src = 'img/brevada.png';
@@ -50,6 +50,7 @@ docReady(() => {
      * libraries and plugins have been loaded. */
     document.addEventListener('deviceready', () => {
         /* Enter "kiosk" mode - assume control of Home Screen and Settings. */
+        AndroidFullScreen.immersiveMode(() => false, () => false);
         Environment.lock();
 
         RequirePermissions(NPermissions) /* Prompt user if required. */

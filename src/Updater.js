@@ -61,11 +61,11 @@ const Updater = (function (undefined) {
                 window.resolveLocalFileSystemURL(cordova.file.dataDirectory, dirEntry => {
                     dirEntry.getDirectory(brv.env.DYNAMIC_APP_DIR, { create: true }, resolve, reject);
                 }, err => reject(new FileSystemError(err)));
-            }).then(dir => updater.removeCachedFiles().then(
+            }).then(dir => updater.removeCachedFiles().then(() => (
                 Promise.all(response.data.files.map(
                     file => updater.downloadFile(dir, file.id, file.name)
                 ))
-            ));
+            )));
         })
     );
 
@@ -129,7 +129,7 @@ const Updater = (function (undefined) {
                     /* Up to date. */
                     return updater.getCachedFiles();
                 } else {
-                    window.tablet && tablet.status("Update available...");
+                    tablet.status("Update available...");
                     return updater.download().then(() => Promise.resolve(
                         /* On success, update local version. */
                         brv.env.getDBConfig().set('version', master).write()
@@ -141,7 +141,7 @@ const Updater = (function (undefined) {
             })
         )).catch(() => {
             /* No internet connection / cannot reach servers. Operate in offline mode. */
-            window.tablet && tablet.status("Operating in offline mode...");
+            tablet.status("Operating in offline mode...");
             return updater.getCachedFiles();
         })
     );

@@ -9,7 +9,7 @@ let tablet = {};
  */
 tablet.status = msg => {
     let p = document.querySelector(
-        '#feedback-root > .cordova-loading > .deviceready > p'
+        '#cordova-app > .cordova-loading > .deviceready > p'
     );
 
     if (p) {

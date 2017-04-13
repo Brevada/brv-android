@@ -28,7 +28,6 @@
     <preference name="AndroidLaunchMode" value="singleInstance" />
     <preference name="BackgroundColor" value="0xFFFFFF" />
     <preference name="DisallowOverscroll" value="true" />
-
     <icon src="res/icon.png" />
     <platform name="android">
         <allow-intent href="market:*" />
@@ -41,7 +40,6 @@
         <allow-intent href="itms:*" />
         <allow-intent href="itms-apps:*" />
     </platform>
-
     <plugin name="cordova-plugin-insomnia" spec="https://github.com/EddyVerbruggen/Insomnia-PhoneGap-Plugin.git" />
     <plugin name="cordova-plugin-uniquedeviceid" spec="~1.3.2" />
     <plugin name="cordova-plugin-device" spec="~1.0.1" />
@@ -55,4 +53,6 @@
     <plugin name="cordova-plugin-file" spec="~4.3.2" />
     <plugin name="cordova-plugin-android-permissions" spec="~0.11.0" />
     <plugin name="com.noahnu.cordova.preventexit" spec="https://github.com/noahnu/cordova-prevent-exit.git" />
+    <plugin name="cordova-plugin-fullscreen" spec="~1.1.0" />
+    <plugin name="ionic-plugin-keyboard" spec="~2.2.1" />
 </widget>

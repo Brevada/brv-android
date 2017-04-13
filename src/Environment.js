@@ -123,7 +123,7 @@ import { AxiosErrorWrapper, PluginError, FileSystemError } from 'lib/Errors';
       * Resolves to data directory entry.
       */
      environment.resolveFileSystem = () => new Promise((resolve, reject) => {
-         window.tablet && tablet.status("Configuring file system...");
+         tablet.status("Configuring file system...");
 
          window.resolveLocalFileSystemURL(cordova.file.applicationDirectory, entry => {
              _appDirectory = entry.toURL() + 'www/';
@@ -241,11 +241,11 @@ import { AxiosErrorWrapper, PluginError, FileSystemError } from 'lib/Errors';
          let now = (+new Date())/1000;
          if (cred.expiry_date < now) {
              /* Expired. */
-             window.tablet && tablet.status("Registering device...");
+             tablet.status("Registering device...");
              return environment.auth.register();
          } else if (cred.renewal_date < now) {
              /* Time for renewal, but don't fail if not successful. */
-             window.tablet && tablet.status("Renewing credentials...");
+             tablet.status("Renewing credentials...");
              return environment.auth.renew();
          } else {
              /* Acquired the token "recently". */
@@ -269,7 +269,7 @@ import { AxiosErrorWrapper, PluginError, FileSystemError } from 'lib/Errors';
       * Initializes databases.
       */
      environment.setupDB = dataEntry => {
-         window.tablet && tablet.status("Configuring device storage...");
+         tablet.status("Configuring device storage...");
 
          let dbOptions = {
              storage: dbStorage(dataEntry)
@@ -304,7 +304,6 @@ import { AxiosErrorWrapper, PluginError, FileSystemError } from 'lib/Errors';
       * Imports files into app container.
       */
      environment.render = files => {
-         document.getElementsByTagName('html')[0].className = '';
          files = files.concat().sort();
 
          let version = _dbConfig.get('version', 0).value();
@@ -337,6 +336,14 @@ import { AxiosErrorWrapper, PluginError, FileSystemError } from 'lib/Errors';
          }
 
          return Promise.resolve();
+     };
+
+     /**
+      * Called by application to signal it is "ready" to be used.
+      */
+     environment.onReady = () => {
+         document.getElementsByTagName('html')[0].className = '';
+         tablet.status("Ready.");
      };
 
      /**
