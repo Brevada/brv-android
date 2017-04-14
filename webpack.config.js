@@ -23,8 +23,8 @@ module.exports = {
     plugins: [
         new webpack.DefinePlugin({
             SERVER_URL: process.env.NODE_ENV === 'production' ?
-                         JSON.stringify(process.env.SERVER_URL || "https://beta.brevada.com") :
-                         JSON.stringify(process.env.DEV_URL || "http://localhost"),
+                         JSON.stringify(process.env.SERVER_URL) : /* e.g. "https://beta.brevada.com" */
+                         JSON.stringify(process.env.DEV_URL), /* e.g. "http://localhost" */
             API_VERSION: JSON.stringify(process.env.API_VERSION || "v1.1"),
             ADMIN_PASSWORD: JSON.stringify("Brevada123")
         })
