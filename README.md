@@ -39,7 +39,7 @@ To generate an APK, execute:
 
 or in production (slower process than dev):
 ```
-> npm run build
+> NODE_ENV=production SERVER_URL=https://... API_VERSION=v1.1 npm run build
 ```
 
 To build and deploy to a device, connect the device to your computer via USB and execute:
@@ -48,9 +48,14 @@ To build and deploy to a device, connect the device to your computer via USB and
 > cordova run
 ```
 
+For development, set the environment variable DEV_URL to your local server:
+```
+> DEV_URL=http://localhost npm run dev-build-js && cordova run
+```
+
 ## API Connectivity
 
-brv-android connects directly to brevada.com using the official Brevada APIs. Specifically, the following API routes are used (see brv repository for full API):
+brv-android connects directly to brevada.com using the official Brevada APIs. Specifically, the following API routes are used (see brv repository for full API; this list is not exhaustive):
 
 ```
 Request: GET /api/v1.1/feedback/version
@@ -68,7 +73,7 @@ Response: FILE STREAM
 ```
 
 ```
-Request: POST /api/v1.1/tablet/announce
+Request: POST /api/v1.1/device/announce
 Payload: { tablet data }
 Response: 200
 ```

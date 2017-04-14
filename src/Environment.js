@@ -14,8 +14,8 @@ import { AxiosErrorWrapper, PluginError, FileSystemError } from 'lib/Errors';
 
      environment.IS_DEVICE = true;
 
-     environment.DOMAIN = 'http://192.168.1.115';//'http://beta.brevada.com';
-     environment.API_URL = environment.DOMAIN + '/api/v1.1';
+     environment.DOMAIN = SERVER_URL;
+     environment.API_URL = environment.DOMAIN + '/api/' + API_VERSION;
      environment.DYNAMIC_APP_DIR = 'latest'; /* Location of downloaded application files. */
 
      let _appDirectory = undefined; /* Resolved path to www dir. */
@@ -33,7 +33,7 @@ import { AxiosErrorWrapper, PluginError, FileSystemError } from 'lib/Errors';
                               * exit intent. */
          clickSpeed: 5000, /* Timeout before clickCount is reset; recorded from
                             * time of last click. */
-         password: 'Brevada123' /* Admin password required to perform action. */
+         password: ADMIN_PASSWORD /* Admin password required to perform action. */
      };
 
      /* On ready event fires when application software is ready to be used. */
