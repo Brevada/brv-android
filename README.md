@@ -77,3 +77,13 @@ Request: POST /api/v1.1/device/announce
 Payload: { tablet data }
 Response: 200
 ```
+
+## Built-In Commands
+
+__restart__: Restarts application.
+
+__force-update__: Resets cached version and performs restart.
+
+__lock__: Invokes application's intent to assume Home Screen and Settings.
+
+__unlock__: Clears application's home and settings intents.
