@@ -33,7 +33,7 @@ const Updater = (function (undefined) {
             let fileTransfer = new FileTransfer();
             return new Promise((resolve, reject) => {
                 dir.getFile(name, { create: true }, entry => {
-                    fileTransfer.download(uri, entry.toURL(), dlEntry => {
+                    fileTransfer.download(uri + "?_nocache=" + (+new Date()), entry.toURL(), dlEntry => {
                         resolve(dlEntry.toURL());
                     }, reject, false, brv.env.auth.getHeaders(access_token));
                 }, reject);
