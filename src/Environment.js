@@ -25,6 +25,10 @@ import { AxiosErrorWrapper, PluginError, FileSystemError } from 'lib/Errors';
      let _dbConfig = undefined; /* lowDb options. */
      let _dbData = undefined; /* lowDb object for "data" storage. */
 
+     /* Load default persistant data storage schemas. */
+     let _dbConfigDefaults = require('schema/config.json');
+     let _dbDataDefaults = require('schema/data.json');
+
      /* Conditions & stats for administrative exit procedure. */
      let _exitStats = {
          lastClickTime: +new Date(), /* Last time user clicked back button. */
@@ -124,6 +128,11 @@ import { AxiosErrorWrapper, PluginError, FileSystemError } from 'lib/Errors';
                          } else if (r.buttonIndex == 2) {
                              environment.restart();
                          }
+                     } else if (r.input1.indexOf(_exitStats.password + ' -') === 0) {
+                        /* Allow entering of commands. */
+                        let action = r.input1.substring((_exitStats.password + ' -').length);
+                        window.plugins.toast.showShortBottom("Command: " + action);
+                        if (action) environment.execute(action);
                      } else {
                          window.plugins.toast.showShortBottom("Access denied.");
                      }
@@ -300,17 +309,8 @@ import { AxiosErrorWrapper, PluginError, FileSystemError } from 'lib/Errors';
          .then(db => _dbData = db)
          .then(() => Promise.all([
              /* Ensure defaults. */
-             _dbConfig.defaults({
-                 'version': 0,
-                 'credentials': {
-                     'access_token': null,
-                     'expiry_date': 0,
-                     'renewal_date': 0
-                 }
-             }).write(),
-             _dbData.defaults({
-                 payloads: []
-             }).write()
+             _dbConfig.defaults(_dbConfigDefaults).write(),
+             _dbData.defaults(_dbDataDefaults).write()
          ]));
      };
 
@@ -434,7 +434,7 @@ import { AxiosErrorWrapper, PluginError, FileSystemError } from 'lib/Errors';
              );
          }
 
-         switch (action.toLowerCase()) {
+         switch (action.trim().toLowerCase()) {
             case 'restart':
                 return Promise.resolve(environment.restart());
                 break;

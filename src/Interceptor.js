@@ -17,9 +17,17 @@ const Interceptor = (function (undefined) {
 
         if (!opts.url) return Promise.reject();
 
-        if (opts.url.indexOf(brv.env.DOMAIN) !== 0) {
+        if (opts.url.indexOf('/') === 0) {
             /* Prepend DOMAIN URL. */
             opts.url = brv.env.DOMAIN + opts.url;
+        } else {
+            /* Ensure server url is up-to-date. */
+            opts.url = opts.url.replace(
+                /(?:[a-zA-Z]+:\/\/)(?:[^\/\s]+)(.*)/,
+                (match, rest) => {
+                    return brv.env.DOMAIN + rest;
+                }
+            );
         }
 
         /* Add timestamp. */
