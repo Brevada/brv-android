@@ -19,7 +19,11 @@ const Updater = (function (undefined) {
         brv.env.auth.require().then(access_token => (
             axios.get(
                 brv.env.API_URL + '/feedback/version',
-                brv.env.auth.getHeaders(access_token)
+                Object.assign({
+                    params: {
+                        '_timestamp': Date.now()
+                    }
+                }, brv.env.auth.getHeaders(access_token))
             )
         )).catch(AxiosErrorWrapper)
     );
@@ -50,7 +54,11 @@ const Updater = (function (undefined) {
         .then(access_token => (
             axios.get(
                 brv.env.API_URL + '/feedback/bundle',
-                brv.env.auth.getHeaders(access_token)
+                Object.assign({
+                    params: {
+                        '_timestamp': Date.now()
+                    }
+                }, brv.env.auth.getHeaders(access_token))
             )
             .catch(AxiosErrorWrapper)
         ))
@@ -139,8 +147,9 @@ const Updater = (function (undefined) {
                 console.debug("Unable to reach Brevada servers.");
                 return Promise.reject();
             })
-        )).catch(() => {
+        )).catch((err) => {
             /* No internet connection / cannot reach servers. Operate in offline mode. */
+            if (err) console.error(err);
             tablet.status("Operating in offline mode...");
             return updater.getCachedFiles();
         })

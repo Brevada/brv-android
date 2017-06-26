@@ -38,7 +38,7 @@ const Interceptor = (function (undefined) {
 
         if (store) {
             /* Don't override timestamp. */
-            if (!opts[store].hasOwnProperty('_timestamp')) {
+            if (opts[store] && !opts[store].hasOwnProperty('_timestamp')) {
                 opts[store] = Object.assign({}, opts[store] || {}, {
                     _timestamp: (+new Date())/1000
                 });
